@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>The Perfect XI — go unbeaten</title>
+<style>
+  :root{
+    --bg:#0c1410; --panel:#13201a; --panel2:#182a20; --line:#26402f;
+    --ink:#e8f3ec; --dim:#8fae9d; --green:#19c37d; --green2:#0f9d63;
+    --gold:#f4c542; --red:#e3534f; --draw:#5a7568;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:radial-gradient(120% 80% at 50% -10%,#16271d 0%,var(--bg) 60%);
+       color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+       display:flex;justify-content:center;padding:18px}
+  .app{width:100%;max-width:760px}
+  .nav{display:none;align-items:center;justify-content:space-between;gap:10px;
+       position:sticky;top:0;z-index:20;margin-bottom:14px;padding:9px 14px;
+       background:rgba(12,20,16,.85);backdrop-filter:blur(8px);
+       border:1px solid var(--line);border-radius:12px}
+  .navbrand{background:none;border:none;color:var(--ink);font-family:var(--mono);
+            font-weight:800;font-size:14px;letter-spacing:-.3px;cursor:pointer;padding:5px 4px}
+  .navbrand b{color:var(--green)}
+  .navright{display:flex;align-items:center;gap:12px}
+  .crumb{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .navback{background:none;border:1px solid var(--line);color:var(--ink);
+           font-size:13px;font-weight:600;padding:6px 12px;border-radius:9px;cursor:pointer}
+  .navback:hover{border-color:var(--green)}
+  @media(max-width:560px){.crumb{display:none}}
+  .scr{display:none;animation:fade .25s ease}
+  .scr.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .brand{text-align:center;margin:18px 0 8px}
+  .brand h1{font-family:var(--mono);font-weight:800;letter-spacing:-1px;
+            font-size:clamp(30px,9vw,56px);margin:0;line-height:.95}
+  .brand h1 b{color:var(--green)}
+  .brand p{color:var(--dim);margin:8px 0 0;font-size:14px}
+
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}
+  @media(max-width:560px){.modes{grid-template-columns:1fr}}
+  .mode{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+        padding:20px;cursor:pointer;transition:.15s;position:relative;overflow:hidden}
+  .mode:hover{border-color:var(--green);transform:translateY(-3px)}
+  .mode .num{font-family:var(--mono);font-size:34px;font-weight:800;color:var(--green)}
+  .mode h3{margin:6px 0 4px;font-size:19px}
+  .mode small{color:var(--dim);display:block;line-height:1.45;font-size:13px}
+  .mode .tag{position:absolute;top:14px;right:14px;font-family:var(--mono);
+             font-size:11px;color:var(--dim);border:1px solid var(--line);
+             padding:3px 8px;border-radius:20px}
+
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+       margin:6px 0 16px;flex-wrap:wrap}
+  .pill{font-family:var(--mono);font-size:12px;color:var(--dim);
+        border:1px solid var(--line);border-radius:20px;padding:5px 11px;background:var(--panel)}
+  .pill b{color:var(--ink)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+
+  button{font-family:var(--sans);cursor:pointer;border:none;border-radius:12px;
+         font-size:15px;font-weight:600;padding:12px 18px;transition:.12s}
+  .btn{background:var(--green);color:#04140c}
+  .btn:hover{background:var(--green2)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--green)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* draft */
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+  .spin{text-align:center}
+  .spin .ctx{font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:1px}
+  .spin .draw{font-family:var(--mono);font-weight:800;font-size:clamp(22px,6vw,34px);margin:8px 0 4px}
+  .spin .nation{color:var(--green)}
+  .spin .era{color:var(--gold)}
+  .spin .draw.spinning{filter:blur(.6px);opacity:.8;letter-spacing:1px}
+  @keyframes pop{0%{transform:scale(1.22)}55%{transform:scale(.95)}100%{transform:scale(1)}}
+  .spin .draw.land{animation:pop .36s cubic-bezier(.2,1.4,.4,1)}
+  .cards{transition:opacity .2s}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  @media(max-width:560px){.cards{grid-template-columns:1fr}}
+  .card{text-align:left;background:var(--panel2);border:1px solid var(--line);
+        border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+  .card .nm{font-weight:700;font-size:15px}
+  .card .meta{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .card .rt{margin-top:4px;font-family:var(--mono);font-size:12px}
+  .card .rt b{color:var(--green);font-size:15px}
+  .card:hover{border-color:var(--green)}
+  .role-chip{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--dim);
+             border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-top:2px}
+
+  /* XI grid */
+  .xi{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
+  @media(max-width:560px){.xi{grid-template-columns:1fr}}
+  .slot{display:flex;align-items:center;gap:9px;background:var(--panel);
+        border:1px solid var(--line);border-radius:10px;padding:8px 11px;min-height:46px}
+  .slot.empty{border-style:dashed;opacity:.6}
+  .slot .pos{font-family:var(--mono);font-size:10px;color:var(--dim);width:42px;flex:none}
+  .slot .who{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .slot .who small{display:block;font-weight:400;color:var(--dim);font-family:var(--mono);font-size:10px}
+  .slot .fit{margin-left:auto;font-family:var(--mono);font-size:11px;flex:none}
+  .fit.good{color:var(--green)} .fit.ok{color:var(--gold)} .fit.bad{color:var(--red)}
+
+  /* result */
+  .result{text-align:center;padding:26px 18px}
+  .record{font-family:var(--mono);font-weight:800;letter-spacing:-2px;
+          font-size:clamp(54px,18vw,110px);line-height:.9;margin:6px 0}
+  .verdict{font-family:var(--mono);font-size:clamp(16px,4vw,22px);font-weight:700;letter-spacing:1px}
+  .v-perfect{color:var(--gold)} .v-champ{color:var(--green)} .v-out{color:var(--dim)}
+  .sub{color:var(--dim);margin:10px auto 0;max-width:440px;line-height:1.5;font-size:14px}
+  .grid-emoji{font-size:22px;letter-spacing:3px;margin:18px 0;line-height:1.6;word-break:break-word}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+         background:var(--green);color:#04140c;font-weight:700;padding:10px 18px;
+         border-radius:30px;opacity:0;transition:.2s;pointer-events:none}
+  .toast.on{opacity:1}
+  .foot{text-align:center;color:var(--dim);font-size:12px;margin:22px 0 6px;line-height:1.5}
+  .foot a{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="nav" id="nav">
+    <button class="navbrand" onclick="goHome()">🏏 <b>PERFECT&nbsp;XI</b></button>
+    <div class="navright">
+      <span class="crumb" id="crumb"></span>
+      <button class="navback" id="navback" onclick="goBack()">← back</button>
+    </div>
+  </header>
+
+  <!-- HOME -->
+  <section id="home" class="scr on">
+    <div class="brand">
+      <h1>THE&nbsp;PERFECT&nbsp;<b>XI</b></h1>
+      <p>Draft an all-time cricket XI. Find out if it could go a whole campaign unbeaten.</p>
+    </div>
+    <div class="modes">
+      <div class="mode" onclick="start('wc')">
+        <span class="tag">ODI</span>
+        <div class="num">11–0</div>
+        <h3>World Cup</h3>
+        <small>Build a one-day XI. Top a 10-team group, then win the semi-final and final — all 11 matches, no defeats, for the 11–0.</small>
+      </div>
+      <div class="mode" onclick="start('wtc')">
+        <span class="tag">TEST</span>
+        <div class="num">UNBEATEN</div>
+        <h3>World Test Championship</h3>
+        <small>Build a Test XI. Survive a 6-series cycle — home and away — finish top two of nine, win the one-off final. Go the whole cycle unbeaten for the perfect mace.</small>
+      </div>
+    </div>
+    <div class="foot">
+      Inspired by <a href="https://www.82-0.com" target="_blank" rel="noopener">82-0</a> (NBA) &amp;
+      <a href="https://38-0-0.com" target="_blank" rel="noopener">38-0-0</a> (Premier League).
+      Runs entirely in your browser — no data leaves this page.
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="setup" class="scr">
+    <div class="brand"><h1 id="setupTitle" style="font-size:34px"></h1></div>
+    <div class="stage">
+      <p style="margin:0 0 14px;color:var(--dim)">Choose difficulty:</p>
+      <div class="modes" style="margin-top:0">
+        <div class="mode" onclick="begin('classic')">
+          <h3>Classic</h3>
+          <small>Ratings and stats shown. Draft the strongest XI you can see.</small>
+        </div>
+        <div class="mode" onclick="begin('expert')">
+          <span class="tag">hidden</span>
+          <h3>Expert</h3>
+          <small>Ratings hidden — only names, nations and roles. Draft on pure cricket knowledge. The truth is revealed at the end.</small>
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px"><button class="btn ghost" onclick="show('home')">← back</button></div>
+    </div>
+  </section>
+
+  <!-- DRAFT -->
+  <section id="draft" class="scr">
+    <div class="bar">
+      <span class="pill" id="modePill"></span>
+      <span class="pill">Round <b id="roundN">1</b>/11</span>
+      <span class="pill">Rerolls <b id="rerollN">3</b></span>
+      <span class="pill" id="strengthPill">Strength <b>—</b></span>
+    </div>
+
+    <div class="stage spin" id="spinStage">
+      <div class="ctx">YOUR PICK COMES FROM</div>
+      <div class="draw"><span class="nation" id="dNation">—</span> · <span class="era" id="dEra">—</span></div>
+      <div class="row" style="justify-content:center;margin-top:6px">
+        <button class="btn ghost" id="rerollBtn" onclick="reroll()">↻ reroll team/era</button>
+      </div>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div class="stage">
+      <div class="bar" style="margin:0 0 8px">
+        <strong style="font-size:14px">YOUR XI</strong>
+        <button class="btn ghost" style="padding:6px 12px;font-size:13px" onclick="resetGame()">restart</button>
+      </div>
+      <div class="xi" id="xi"></div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="scr">
+    <div class="stage result">
+      <div class="verdict" id="rVerdict"></div>
+      <div class="record" id="rRecord"></div>
+      <div class="sub" id="rSub"></div>
+      <div class="grid-emoji" id="rGrid"></div>
+      <div class="row" style="justify-content:center">
+        <button class="btn" onclick="shareImage()">📤 share image</button>
+        <button class="btn ghost" onclick="copyResult()">📋 copy text</button>
+        <button class="btn ghost" onclick="resetGame()">play again</button>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="bar" style="margin:0 0 8px"><strong style="font-size:14px">FINAL XI</strong>
+        <span class="pill">Team strength <b id="rStrength">—</b></span></div>
+      <div class="xi" id="rXi"></div>
+    </div>
+  </section>
+
+</div>
+<div class="toast" id="toast">copied to clipboard</div>
+
+<script>
+/* ============================================================
+   THE PERFECT XI  — client-side draft + unbeaten-season sim
+   Roles: OPEN top-of-order opener · TOP no.3 · MID middle-order
+          FIN one-day finisher · KEEP wicketkeeper · AR all-rounder
+          PACE fast bowler · SPIN spin bowler
+   ============================================================ */
+
+/* ---- player database (test / odi overall 0-99; null = not eligible that format)
+   Players span multiple eras via e:[] so each Nation × Era spin lands on a full squad. ---- */
+const DB = [
+ /* ===== AUSTRALIA ===== */
+ {n:"Don Bradman",      c:"Australia",   e:["1930s","1940s"], r:["TOP","MID"],   test:99, odi:null},
+ {n:"Dennis Lillee",    c:"Australia",   e:["1970s","1980s"], r:["PACE"],        test:93, odi:84},
+ {n:"Jeff Thomson",     c:"Australia",   e:["1970s","1980s"], r:["PACE"],        test:86, odi:78},
+ {n:"Greg Chappell",    c:"Australia",   e:["1970s","1980s"], r:["TOP","MID"],   test:92, odi:82},
+ {n:"Ian Chappell",     c:"Australia",   e:["1970s"],         r:["MID"],         test:85, odi:78},
+ {n:"Rod Marsh",        c:"Australia",   e:["1970s","1980s"], r:["KEEP"],        test:82, odi:78},
+ {n:"Doug Walters",     c:"Australia",   e:["1970s"],         r:["MID"],         test:80, odi:74},
+ {n:"Allan Border",     c:"Australia",   e:["1980s","1990s"], r:["MID"],         test:85, odi:80},
+ {n:"David Boon",       c:"Australia",   e:["1980s","1990s"], r:["OPEN","TOP"],  test:82, odi:80},
+ {n:"Dean Jones",       c:"Australia",   e:["1980s","1990s"], r:["MID"],         test:80, odi:86},
+ {n:"Craig McDermott",  c:"Australia",   e:["1980s","1990s"], r:["PACE"],        test:82, odi:82},
+ {n:"Mark Taylor",      c:"Australia",   e:["1990s"],         r:["OPEN"],        test:84, odi:78},
+ {n:"Michael Slater",   c:"Australia",   e:["1990s"],         r:["OPEN"],        test:80, odi:74},
+ {n:"Mark Waugh",       c:"Australia",   e:["1990s"],         r:["TOP","MID"],   test:84, odi:86},
+ {n:"Steve Waugh",      c:"Australia",   e:["1990s","2000s"], r:["MID"],         test:86, odi:84},
+ {n:"Ian Healy",        c:"Australia",   e:["1990s"],         r:["KEEP"],        test:78, odi:72},
+ {n:"Shane Warne",      c:"Australia",   e:["1990s","2000s"], r:["SPIN"],        test:96, odi:88},
+ {n:"Glenn McGrath",    c:"Australia",   e:["1990s","2000s"], r:["PACE"],        test:94, odi:92},
+ {n:"Michael Bevan",    c:"Australia",   e:["1990s","2000s"], r:["FIN","MID"],   test:60, odi:90},
+ {n:"Matthew Hayden",   c:"Australia",   e:["2000s"],         r:["OPEN"],        test:89, odi:84},
+ {n:"Justin Langer",    c:"Australia",   e:["2000s"],         r:["OPEN"],        test:84, odi:76},
+ {n:"Ricky Ponting",    c:"Australia",   e:["2000s"],         r:["TOP","MID"],   test:93, odi:93},
+ {n:"Adam Gilchrist",   c:"Australia",   e:["2000s"],         r:["KEEP","OPEN"], test:90, odi:94},
+ {n:"Damien Martyn",    c:"Australia",   e:["2000s"],         r:["MID"],         test:82, odi:84},
+ {n:"Brett Lee",        c:"Australia",   e:["2000s"],         r:["PACE"],        test:84, odi:88},
+ {n:"Jason Gillespie",  c:"Australia",   e:["2000s"],         r:["PACE"],        test:84, odi:80},
+ {n:"Michael Clarke",   c:"Australia",   e:["2000s","2010s"], r:["TOP","MID"],   test:88, odi:86},
+ {n:"David Warner",     c:"Australia",   e:["2010s","2020s"], r:["OPEN"],        test:86, odi:88},
+ {n:"Steve Smith",      c:"Australia",   e:["2010s","2020s"], r:["TOP","MID"],   test:95, odi:85},
+ {n:"Mitchell Johnson", c:"Australia",   e:["2010s"],         r:["PACE"],        test:82, odi:84},
+ {n:"Mitchell Starc",   c:"Australia",   e:["2010s","2020s"], r:["PACE"],        test:86, odi:90},
+ {n:"Pat Cummins",      c:"Australia",   e:["2010s","2020s"], r:["PACE"],        test:90, odi:86},
+ {n:"Josh Hazlewood",   c:"Australia",   e:["2010s","2020s"], r:["PACE"],        test:86, odi:84},
+ {n:"Nathan Lyon",      c:"Australia",   e:["2010s","2020s"], r:["SPIN"],        test:86, odi:72},
+ {n:"Glenn Maxwell",    c:"Australia",   e:["2010s","2020s"], r:["FIN","AR"],    test:66, odi:90},
+ {n:"Marnus Labuschagne",c:"Australia",  e:["2020s"],         r:["TOP","MID"],   test:88, odi:80},
+ {n:"Travis Head",      c:"Australia",   e:["2020s"],         r:["OPEN","MID"],  test:84, odi:88},
+ {n:"Alex Carey",       c:"Australia",   e:["2020s"],         r:["KEEP"],        test:76, odi:80},
+
+ /* ===== WEST INDIES ===== */
+ {n:"Garfield Sobers",  c:"West Indies", e:["1960s","1970s"], r:["AR","MID","SPIN"], test:97, odi:null},
+ {n:"Gordon Greenidge", c:"West Indies", e:["1970s","1980s"], r:["OPEN"],        test:88, odi:82},
+ {n:"Desmond Haynes",   c:"West Indies", e:["1980s","1990s"], r:["OPEN"],        test:82, odi:82},
+ {n:"Viv Richards",     c:"West Indies", e:["1970s","1980s"], r:["MID","TOP"],   test:93, odi:92},
+ {n:"Clive Lloyd",      c:"West Indies", e:["1970s","1980s"], r:["MID"],         test:85, odi:84},
+ {n:"Alvin Kallicharran",c:"West Indies",e:["1970s","1980s"], r:["MID"],         test:80, odi:76},
+ {n:"Larry Gomes",      c:"West Indies", e:["1980s"],         r:["MID"],         test:76, odi:74},
+ {n:"Jeff Dujon",       c:"West Indies", e:["1980s"],         r:["KEEP"],        test:78, odi:80},
+ {n:"Malcolm Marshall", c:"West Indies", e:["1980s"],         r:["PACE"],        test:96, odi:86},
+ {n:"Joel Garner",      c:"West Indies", e:["1980s"],         r:["PACE"],        test:88, odi:88},
+ {n:"Michael Holding",  c:"West Indies", e:["1970s","1980s"], r:["PACE"],        test:88, odi:82},
+ {n:"Andy Roberts",     c:"West Indies", e:["1970s","1980s"], r:["PACE"],        test:86, odi:82},
+ {n:"Colin Croft",      c:"West Indies", e:["1970s","1980s"], r:["PACE"],        test:82, odi:76},
+ {n:"Richie Richardson",c:"West Indies", e:["1980s","1990s"], r:["TOP","MID"],   test:82, odi:82},
+ {n:"Brian Lara",       c:"West Indies", e:["1990s","2000s"], r:["TOP","MID"],   test:95, odi:88},
+ {n:"Curtly Ambrose",   c:"West Indies", e:["1990s"],         r:["PACE"],        test:92, odi:86},
+ {n:"Courtney Walsh",   c:"West Indies", e:["1990s"],         r:["PACE"],        test:88, odi:82},
+ {n:"Carl Hooper",      c:"West Indies", e:["1990s"],         r:["AR","MID"],    test:78, odi:82},
+ {n:"Shivnarine Chanderpaul",c:"West Indies",e:["1990s","2000s"],r:["MID"],      test:86, odi:82},
+ {n:"Ramnaresh Sarwan", c:"West Indies", e:["2000s"],         r:["MID","TOP"],   test:80, odi:82},
+ {n:"Fidel Edwards",    c:"West Indies", e:["2000s"],         r:["PACE"],        test:74, odi:76},
+ {n:"Chris Gayle",      c:"West Indies", e:["2000s","2010s"], r:["OPEN"],        test:84, odi:88},
+ {n:"Kieron Pollard",   c:"West Indies", e:["2010s"],         r:["FIN","AR"],    test:50, odi:84},
+ {n:"Sunil Narine",     c:"West Indies", e:["2010s"],         r:["SPIN","FIN"],  test:60, odi:82},
+ {n:"Jason Holder",     c:"West Indies", e:["2010s","2020s"], r:["AR","PACE"],   test:82, odi:82},
+
+ /* ===== ENGLAND ===== */
+ {n:"Geoffrey Boycott", c:"England",     e:["1970s"],         r:["OPEN"],        test:86, odi:74},
+ {n:"Alan Knott",       c:"England",     e:["1970s"],         r:["KEEP"],        test:80, odi:70},
+ {n:"Derek Underwood",  c:"England",     e:["1970s"],         r:["SPIN"],        test:84, odi:76},
+ {n:"Bob Willis",       c:"England",     e:["1970s","1980s"], r:["PACE"],        test:84, odi:78},
+ {n:"Ian Botham",       c:"England",     e:["1980s"],         r:["AR","PACE"],   test:88, odi:82},
+ {n:"David Gower",      c:"England",     e:["1980s"],         r:["MID","TOP"],   test:84, odi:82},
+ {n:"Graham Gooch",     c:"England",     e:["1980s","1990s"], r:["OPEN"],        test:86, odi:84},
+ {n:"Mike Gatting",     c:"England",     e:["1980s"],         r:["MID"],         test:78, odi:78},
+ {n:"Michael Vaughan",  c:"England",     e:["2000s"],         r:["TOP","OPEN"],  test:82, odi:78},
+ {n:"Marcus Trescothick",c:"England",    e:["2000s"],         r:["OPEN"],        test:82, odi:84},
+ {n:"Andrew Strauss",   c:"England",     e:["2000s"],         r:["OPEN"],        test:82, odi:78},
+ {n:"Kevin Pietersen",  c:"England",     e:["2000s","2010s"], r:["TOP","MID"],   test:88, odi:88},
+ {n:"Andrew Flintoff",  c:"England",     e:["2000s"],         r:["AR","PACE"],   test:80, odi:84},
+ {n:"Alastair Cook",    c:"England",     e:["2010s"],         r:["OPEN"],        test:88, odi:80},
+ {n:"James Anderson",   c:"England",     e:["2010s","2020s"], r:["PACE"],        test:90, odi:82},
+ {n:"Stuart Broad",     c:"England",     e:["2010s","2020s"], r:["PACE"],        test:86, odi:80},
+ {n:"Graeme Swann",     c:"England",     e:["2010s"],         r:["SPIN"],        test:84, odi:80},
+ {n:"Matt Prior",       c:"England",     e:["2010s"],         r:["KEEP"],        test:78, odi:74},
+ {n:"Joe Root",         c:"England",     e:["2010s","2020s"], r:["TOP","MID"],   test:89, odi:84},
+ {n:"Ben Stokes",       c:"England",     e:["2010s","2020s"], r:["AR","PACE"],   test:87, odi:88},
+ {n:"Jos Buttler",      c:"England",     e:["2010s","2020s"], r:["KEEP","FIN"],  test:74, odi:92},
+ {n:"Eoin Morgan",      c:"England",     e:["2010s"],         r:["FIN","MID"],   test:58, odi:88},
+ {n:"Jonny Bairstow",   c:"England",     e:["2010s","2020s"], r:["OPEN","KEEP"], test:80, odi:86},
+ {n:"Harry Brook",      c:"England",     e:["2020s"],         r:["TOP","MID"],   test:86, odi:84},
+ {n:"Jofra Archer",     c:"England",     e:["2020s"],         r:["PACE"],        test:80, odi:86},
+ {n:"Adil Rashid",      c:"England",     e:["2010s","2020s"], r:["SPIN"],        test:66, odi:84},
+
+ /* ===== INDIA ===== */
+ {n:"Sunil Gavaskar",   c:"India",       e:["1970s","1980s"], r:["OPEN","TOP"],  test:92, odi:70},
+ {n:"Gundappa Viswanath",c:"India",      e:["1970s"],         r:["MID"],         test:82, odi:70},
+ {n:"Bishan Bedi",      c:"India",       e:["1970s"],         r:["SPIN"],        test:85, odi:68},
+ {n:"BS Chandrasekhar", c:"India",       e:["1970s"],         r:["SPIN"],        test:82, odi:60},
+ {n:"Karsan Ghavri",    c:"India",       e:["1970s","1980s"], r:["PACE","AR"],   test:70, odi:68},
+ {n:"Syed Kirmani",     c:"India",       e:["1980s"],         r:["KEEP"],        test:74, odi:70},
+ {n:"Kapil Dev",        c:"India",       e:["1980s"],         r:["AR","PACE"],   test:88, odi:86},
+ {n:"Dilip Vengsarkar", c:"India",       e:["1980s"],         r:["MID"],         test:82, odi:76},
+ {n:"Mohinder Amarnath",c:"India",       e:["1980s"],         r:["MID","AR"],    test:78, odi:78},
+ {n:"Krishnamachari Srikkanth",c:"India",e:["1980s"],         r:["OPEN"],        test:74, odi:80},
+ {n:"Sachin Tendulkar", c:"India",       e:["1990s","2000s"], r:["TOP","OPEN"],  test:96, odi:97},
+ {n:"Anil Kumble",      c:"India",       e:["1990s","2000s"], r:["SPIN"],        test:90, odi:84},
+ {n:"Javagal Srinath",  c:"India",       e:["1990s","2000s"], r:["PACE"],        test:80, odi:84},
+ {n:"Sourav Ganguly",   c:"India",       e:["2000s"],         r:["TOP","MID"],   test:82, odi:88},
+ {n:"Rahul Dravid",     c:"India",       e:["2000s"],         r:["TOP","MID"],   test:92, odi:84},
+ {n:"VVS Laxman",       c:"India",       e:["2000s"],         r:["MID"],         test:86, odi:78},
+ {n:"Virender Sehwag",  c:"India",       e:["2000s","2010s"], r:["OPEN","TOP"],  test:88, odi:88},
+ {n:"MS Dhoni",         c:"India",       e:["2000s","2010s"], r:["KEEP","FIN"],  test:78, odi:94},
+ {n:"Zaheer Khan",      c:"India",       e:["2000s","2010s"], r:["PACE"],        test:82, odi:84},
+ {n:"Harbhajan Singh",  c:"India",       e:["2000s"],         r:["SPIN"],        test:82, odi:80},
+ {n:"Yuvraj Singh",     c:"India",       e:["2000s","2010s"], r:["FIN","MID"],   test:66, odi:88},
+ {n:"Gautam Gambhir",   c:"India",       e:["2010s"],         r:["OPEN"],        test:80, odi:84},
+ {n:"Virat Kohli",      c:"India",       e:["2010s","2020s"], r:["TOP","MID"],   test:90, odi:96},
+ {n:"Rohit Sharma",     c:"India",       e:["2010s","2020s"], r:["OPEN","TOP"],  test:80, odi:94},
+ {n:"Cheteshwar Pujara",c:"India",       e:["2010s","2020s"], r:["TOP"],         test:84, odi:60},
+ {n:"Ajinkya Rahane",   c:"India",       e:["2010s"],         r:["MID"],         test:80, odi:74},
+ {n:"Ravichandran Ashwin",c:"India",     e:["2010s","2020s"], r:["SPIN","AR"],   test:90, odi:82},
+ {n:"Ravindra Jadeja",  c:"India",       e:["2010s","2020s"], r:["AR","SPIN"],   test:88, odi:86},
+ {n:"Jasprit Bumrah",   c:"India",       e:["2010s","2020s"], r:["PACE"],        test:90, odi:92},
+ {n:"Mohammed Shami",   c:"India",       e:["2010s","2020s"], r:["PACE"],        test:84, odi:86},
+ {n:"KL Rahul",         c:"India",       e:["2020s"],         r:["OPEN","KEEP"], test:80, odi:84},
+ {n:"Shubman Gill",     c:"India",       e:["2020s"],         r:["OPEN","TOP"],  test:82, odi:88},
+ {n:"Rishabh Pant",     c:"India",       e:["2020s"],         r:["KEEP","MID"],  test:84, odi:84},
+ {n:"Hardik Pandya",    c:"India",       e:["2020s"],         r:["AR","PACE"],   test:66, odi:86},
+
+ /* ===== PAKISTAN ===== */
+ {n:"Zaheer Abbas",     c:"Pakistan",    e:["1980s"],         r:["TOP","MID"],   test:82, odi:82},
+ {n:"Javed Miandad",    c:"Pakistan",    e:["1980s"],         r:["MID"],         test:85, odi:85},
+ {n:"Imran Khan",       c:"Pakistan",    e:["1980s"],         r:["AR","PACE"],   test:90, odi:88},
+ {n:"Abdul Qadir",      c:"Pakistan",    e:["1980s"],         r:["SPIN"],        test:82, odi:78},
+ {n:"Mudassar Nazar",   c:"Pakistan",    e:["1980s"],         r:["OPEN"],        test:74, odi:72},
+ {n:"Wasim Bari",       c:"Pakistan",    e:["1980s"],         r:["KEEP"],        test:72, odi:68},
+ {n:"Wasim Akram",      c:"Pakistan",    e:["1990s"],         r:["PACE","AR"],   test:92, odi:94},
+ {n:"Waqar Younis",     c:"Pakistan",    e:["1990s"],         r:["PACE"],        test:88, odi:88},
+ {n:"Saeed Anwar",      c:"Pakistan",    e:["1990s"],         r:["OPEN"],        test:82, odi:90},
+ {n:"Inzamam-ul-Haq",   c:"Pakistan",    e:["1990s","2000s"], r:["MID"],         test:86, odi:88},
+ {n:"Saleem Malik",     c:"Pakistan",    e:["1990s"],         r:["MID"],         test:80, odi:80},
+ {n:"Moin Khan",        c:"Pakistan",    e:["1990s"],         r:["KEEP","FIN"],  test:74, odi:80},
+ {n:"Mushtaq Ahmed",    c:"Pakistan",    e:["1990s"],         r:["SPIN"],        test:78, odi:80},
+ {n:"Saqlain Mushtaq",  c:"Pakistan",    e:["1990s","2000s"], r:["SPIN"],        test:82, odi:86},
+ {n:"Mohammad Yousuf",  c:"Pakistan",    e:["2000s"],         r:["MID"],         test:86, odi:84},
+ {n:"Younis Khan",      c:"Pakistan",    e:["2000s","2010s"], r:["TOP","MID"],   test:88, odi:80},
+ {n:"Shoaib Akhtar",    c:"Pakistan",    e:["2000s"],         r:["PACE"],        test:82, odi:84},
+ {n:"Shahid Afridi",    c:"Pakistan",    e:["2000s","2010s"], r:["FIN","AR","SPIN"], test:60, odi:84},
+ {n:"Misbah-ul-Haq",    c:"Pakistan",    e:["2010s"],         r:["MID"],         test:82, odi:80},
+ {n:"Mohammad Amir",    c:"Pakistan",    e:["2010s"],         r:["PACE"],        test:80, odi:82},
+ {n:"Babar Azam",       c:"Pakistan",    e:["2020s"],         r:["TOP","MID"],   test:86, odi:92},
+ {n:"Shaheen Afridi",   c:"Pakistan",    e:["2020s"],         r:["PACE"],        test:82, odi:88},
+ {n:"Mohammad Rizwan",  c:"Pakistan",    e:["2020s"],         r:["KEEP","MID"],  test:78, odi:86},
+
+ /* ===== SOUTH AFRICA ===== */
+ {n:"Allan Donald",     c:"South Africa",e:["1990s"],         r:["PACE"],        test:88, odi:86},
+ {n:"Hansie Cronje",    c:"South Africa",e:["1990s"],         r:["MID","AR"],    test:78, odi:84},
+ {n:"Jonty Rhodes",     c:"South Africa",e:["1990s"],         r:["MID"],         test:72, odi:82},
+ {n:"Gary Kirsten",     c:"South Africa",e:["1990s","2000s"], r:["OPEN"],        test:82, odi:82},
+ {n:"Shaun Pollock",    c:"South Africa",e:["1990s","2000s"], r:["AR","PACE"],   test:84, odi:88},
+ {n:"Lance Klusener",   c:"South Africa",e:["1990s"],         r:["FIN","AR"],    test:70, odi:88},
+ {n:"Mark Boucher",     c:"South Africa",e:["2000s"],         r:["KEEP"],        test:78, odi:80},
+ {n:"Jacques Kallis",   c:"South Africa",e:["2000s","2010s"], r:["AR","MID"],    test:94, odi:90},
+ {n:"Graeme Smith",     c:"South Africa",e:["2000s","2010s"], r:["OPEN"],        test:86, odi:80},
+ {n:"Hashim Amla",      c:"South Africa",e:["2010s"],         r:["OPEN","TOP"],  test:88, odi:88},
+ {n:"AB de Villiers",   c:"South Africa",e:["2010s"],         r:["FIN","MID","KEEP"], test:88, odi:95},
+ {n:"Dale Steyn",       c:"South Africa",e:["2010s"],         r:["PACE"],        test:94, odi:86},
+ {n:"Morne Morkel",     c:"South Africa",e:["2010s"],         r:["PACE"],        test:82, odi:82},
+ {n:"Vernon Philander", c:"South Africa",e:["2010s"],         r:["PACE","AR"],   test:84, odi:76},
+ {n:"Faf du Plessis",   c:"South Africa",e:["2010s"],         r:["TOP","MID"],   test:84, odi:84},
+ {n:"Quinton de Kock",  c:"South Africa",e:["2010s","2020s"], r:["KEEP","OPEN"], test:80, odi:88},
+ {n:"Kagiso Rabada",    c:"South Africa",e:["2010s","2020s"], r:["PACE"],        test:88, odi:86},
+
+ /* ===== SRI LANKA ===== */
+ {n:"Sanath Jayasuriya",c:"Sri Lanka",   e:["1990s","2000s"], r:["OPEN"],        test:82, odi:90},
+ {n:"Aravinda de Silva",c:"Sri Lanka",   e:["1990s"],         r:["MID"],         test:82, odi:86},
+ {n:"Muttiah Muralitharan",c:"Sri Lanka",e:["1990s","2000s"], r:["SPIN"],        test:96, odi:92},
+ {n:"Chaminda Vaas",    c:"Sri Lanka",   e:["1990s","2000s"], r:["PACE"],        test:80, odi:84},
+ {n:"Marvan Atapattu",  c:"Sri Lanka",   e:["2000s"],         r:["OPEN"],        test:78, odi:78},
+ {n:"Kumar Sangakkara", c:"Sri Lanka",   e:["2000s","2010s"], r:["KEEP","MID"],  test:92, odi:92},
+ {n:"Mahela Jayawardene",c:"Sri Lanka",  e:["2000s","2010s"], r:["MID","TOP"],   test:87, odi:86},
+ {n:"Tillakaratne Dilshan",c:"Sri Lanka",e:["2000s","2010s"], r:["OPEN"],        test:80, odi:86},
+ {n:"Lasith Malinga",   c:"Sri Lanka",   e:["2010s"],         r:["PACE"],        test:74, odi:90},
+ {n:"Rangana Herath",   c:"Sri Lanka",   e:["2010s"],         r:["SPIN"],        test:84, odi:74},
+ {n:"Angelo Mathews",   c:"Sri Lanka",   e:["2010s","2020s"], r:["AR","MID"],    test:82, odi:82},
+
+ /* ===== NEW ZEALAND ===== */
+ {n:"Richard Hadlee",   c:"New Zealand", e:["1980s"],         r:["AR","PACE"],   test:90, odi:84},
+ {n:"Martin Crowe",     c:"New Zealand", e:["1980s","1990s"], r:["TOP","MID"],   test:86, odi:84},
+ {n:"John Wright",      c:"New Zealand", e:["1980s"],         r:["OPEN"],        test:78, odi:76},
+ {n:"Stephen Fleming",  c:"New Zealand", e:["2000s"],         r:["TOP","MID"],   test:82, odi:82},
+ {n:"Daniel Vettori",   c:"New Zealand", e:["2000s","2010s"], r:["SPIN","AR"],   test:82, odi:84},
+ {n:"Brendon McCullum", c:"New Zealand", e:["2000s","2010s"], r:["KEEP","OPEN","FIN"], test:80, odi:86},
+ {n:"Ross Taylor",      c:"New Zealand", e:["2010s"],         r:["MID"],         test:84, odi:86},
+ {n:"Kane Williamson",  c:"New Zealand", e:["2010s","2020s"], r:["TOP","MID"],   test:88, odi:88},
+ {n:"Tim Southee",      c:"New Zealand", e:["2010s","2020s"], r:["PACE"],        test:84, odi:82},
+ {n:"Trent Boult",      c:"New Zealand", e:["2010s","2020s"], r:["PACE"],        test:86, odi:88},
+ {n:"Martin Guptill",   c:"New Zealand", e:["2010s"],         r:["OPEN"],        test:72, odi:86},
+ {n:"Kyle Jamieson",    c:"New Zealand", e:["2020s"],         r:["PACE","AR"],   test:82, odi:76},
+ {n:"Devon Conway",     c:"New Zealand", e:["2020s"],         r:["OPEN","TOP"],  test:82, odi:84},
+
+ /* ===== BANGLADESH ===== */
+ {n:"Shakib Al Hasan",  c:"Bangladesh",  e:["2010s","2020s"], r:["AR","SPIN"],   test:84, odi:88},
+ {n:"Tamim Iqbal",      c:"Bangladesh",  e:["2010s","2020s"], r:["OPEN"],        test:78, odi:84},
+ {n:"Mushfiqur Rahim",  c:"Bangladesh",  e:["2010s","2020s"], r:["KEEP","MID"],  test:78, odi:82},
+ {n:"Mahmudullah",      c:"Bangladesh",  e:["2010s","2020s"], r:["MID","FIN"],   test:70, odi:80},
+ {n:"Mustafizur Rahman",c:"Bangladesh",  e:["2010s","2020s"], r:["PACE"],        test:74, odi:84},
+ {n:"Mehidy Hasan",     c:"Bangladesh",  e:["2020s"],         r:["SPIN","AR"],   test:76, odi:80},
+
+ /* ===== AFGHANISTAN ===== */
+ {n:"Rashid Khan",      c:"Afghanistan", e:["2010s","2020s"], r:["SPIN"],        test:78, odi:90},
+ {n:"Mohammad Nabi",    c:"Afghanistan", e:["2010s","2020s"], r:["AR","SPIN"],   test:66, odi:82},
+ {n:"Mujeeb Ur Rahman", c:"Afghanistan", e:["2020s"],         r:["SPIN"],        test:60, odi:80},
+ {n:"Rahmanullah Gurbaz",c:"Afghanistan",e:["2020s"],         r:["KEEP","OPEN"], test:60, odi:82},
+ {n:"Ibrahim Zadran",   c:"Afghanistan", e:["2020s"],         r:["OPEN","TOP"],  test:62, odi:80},
+
+ /* ===== ZIMBABWE ===== */
+ {n:"Andy Flower",      c:"Zimbabwe",    e:["1990s","2000s"], r:["KEEP","MID"],  test:84, odi:84},
+ {n:"Heath Streak",     c:"Zimbabwe",    e:["1990s","2000s"], r:["AR","PACE"],   test:76, odi:80},
+ {n:"Grant Flower",     c:"Zimbabwe",    e:["1990s","2000s"], r:["OPEN","SPIN"], test:74, odi:78},
+];
+
+/* ---- XI shapes per mode (ordered slots) ---- */
+const SHAPES = {
+  wtc: ["OPEN","OPEN","TOP","MID","MID","AR","KEEP","PACE","PACE","SPIN","PACE"],
+  wc:  ["OPEN","OPEN","TOP","MID","MID","FIN","AR","KEEP","PACE","PACE","SPIN"],
+};
+const POS_LABEL = {OPEN:"Opener",TOP:"No.3",MID:"Middle",FIN:"Finisher",KEEP:"Keeper",AR:"All-round",PACE:"Pace",SPIN:"Spin"};
+const SPIN_NATIONS=[...new Set(DB.map(p=>p.c))];
+const SPIN_ERAS=[...new Set(DB.flatMap(p=>p.e))].sort();
+let SPINNING=false;
+
+/* ---- positional fit (0-1): how well a player suits a slot role ---- */
+const BAT = {OPEN:0,TOP:1,MID:2,FIN:3};
+/* Realistic positional fit — disciplines never cross:
+   • batting slots take batters (adjacency) or an all-rounder; NEVER a bowler or specialist keeper
+   • keeper slot takes only a keeper
+   • all-rounder slot takes only a genuine all-rounder
+   • pace slot takes pace or an all-rounder seamer — NEVER a spinner
+   • spin slot takes spin or a spin all-rounder — NEVER a pace bowler
+   A player's fit() is the best of their roles, so a one-role player only ever lands in that role. */
+function pairFit(slot, role){
+  if(slot===role) return 1;
+  if(slot in BAT){
+    if(role in BAT) return Math.max(0.62, 1 - 0.12*Math.abs(BAT[slot]-BAT[role]));
+    if(role==="AR")  return 0.75;          // all-rounder bats
+    return 0;                              // bowlers & specialist keepers don't fill a batting slot
+  }
+  if(slot==="KEEP") return 0;              // only role===KEEP (handled at top) keeps
+  if(slot==="AR")   return 0;              // only role===AR (handled at top) is a genuine all-rounder
+  if(slot==="PACE") return role==="AR" ? 0.85 : 0;   // pace, or an all-rounder seamer — never a spinner
+  if(slot==="SPIN") return role==="AR" ? 0.85 : 0;   // spin, or a spin all-rounder — never a pace bowler
+  return 0;
+}
+function fit(player, slotRole){ return Math.max(0, ...player.r.map(role=>pairFit(slotRole, role))); }
+
+/* ---- game state ---- */
+let G = null;
+const $ = id => document.getElementById(id);
+
+/* ---- navigation / hash router (browser back & forward work) ---- */
+const FLOW = {home:null, setup:"home", draft:"setup", result:"home"};
+function currentScreen(){ const el=[...document.querySelectorAll(".scr")].find(x=>x.classList.contains("on")); return el?el.id:"home"; }
+function crumbFor(id){
+  const m = G ? (G.mode==="wtc"?"World Test Championship":"World Cup") : "";
+  if(id==="setup")  return m;
+  if(id==="draft")  return `${m} · Round ${Math.min((G?G.round:0)+1,11)}/11`;
+  if(id==="result") return `${m} · Result`;
+  return "";
+}
+function updateCrumb(){ $("crumb").textContent = crumbFor(currentScreen()); }
+function route(id, push=true){
+  if((id==="setup"||id==="draft") && !G) id="home";          // guard deep-links / stale forward
+  if(id==="result" && !(G && G._share)) id="home";
+  document.querySelectorAll(".scr").forEach(x=>x.classList.remove("on"));
+  $(id).classList.add("on");
+  $("nav").style.display = id==="home" ? "none" : "flex";
+  $("navback").style.display = FLOW[id] ? "inline-flex" : "none";
+  updateCrumb();
+  if(push) history.pushState({screen:id}, "", "#"+id);
+  window.scrollTo(0,0);
+}
+function show(s){ route(s); }                                  // all transitions route through history
+function goHome(){ if(guardLeave()) route("home"); }
+function goBack(){ if(guardLeave()) route(FLOW[currentScreen()] || "home"); }
+function guardLeave(){
+  if(currentScreen()==="draft" && G && G.round>0 && G.round<11)
+    return confirm("Leave this draft? Your XI so far will be lost.");
+  return true;
+}
+window.addEventListener("popstate", e=>{
+  const id = (e.state && e.state.screen) || (location.hash||"#home").slice(1) || "home";
+  route(id, false);
+});
+window.addEventListener("keydown", e=>{ if(e.key==="Escape" && currentScreen()!=="home") goBack(); });
+function rating(p){ return G.mode==="wtc" ? p.test : p.odi; }
+function eligible(p){ return rating(p)!=null && rating(p)>0; }
+
+function start(mode){
+  G = {mode, diff:"classic", shape:SHAPES[mode].slice(), picks:new Array(11).fill(null),
+       used:new Set(), rerolls:3, round:0, offer:null};
+  $("setupTitle").innerHTML = mode==="wtc" ? "World Test Championship" : "World Cup";
+  show("setup");
+}
+function begin(diff){
+  G.diff = diff;
+  $("modePill").innerHTML = (G.mode==="wtc"?"WTC · Test":"World Cup · ODI") + " · " + (diff==="expert"?"Expert":"Classic");
+  show("draft");
+  nextRound();
+}
+
+/* ---- which slot indexes are still open ---- */
+function openSlots(){ const o=[]; G.shape.forEach((_,i)=>{ if(!G.picks[i]) o.push(i); }); return o; }
+function bestOpenSlot(p){
+  let best=-1, bf=-1;
+  for(const i of openSlots()){ const f=fit(p, G.shape[i]); if(f>bf){bf=f; best=i;} }
+  return {slot:best, f:bf};
+}
+function canDraft(p){ return eligible(p) && !G.used.has(p.n) && bestOpenSlot(p).f>=0.6; }
+
+/* ---- spin: pick a (nation,era) that offers ≥1 draftable player; aim for ≥2 for choice ---- */
+function spin(){
+  const pool = DB.filter(canDraft);
+  // build candidate (nation,era) combos
+  const combos = {};
+  for(const p of pool) for(const era of p.e){
+    const k = p.c+"||"+era; (combos[k]=combos[k]||[]).push(p);
+  }
+  let keys = Object.keys(combos);
+  if(!keys.length) return null;
+  const rich = keys.filter(k=>combos[k].length>=2);
+  const pickFrom = rich.length ? rich : keys;
+  const k = pickFrom[Math.floor(Math.random()*pickFrom.length)];
+  const [nation,era] = k.split("||");
+  let players = combos[k].slice().sort((a,b)=>rating(b)-rating(a)).slice(0,5);
+  return {nation, era, players};
+}
+
+function nextRound(){
+  if(G.round>=11){ simulate(); return; }
+  $("roundN").textContent = G.round+1;
+  $("rerollN").textContent = G.rerolls;
+  updateCrumb();
+  G.offer = spin();
+  renderXI("xi", false);
+  renderStrength();
+  spinTo(G.offer);
+}
+function reroll(){ if(SPINNING || G.rerolls<=0) return; G.rerolls--; $("rerollN").textContent=G.rerolls; G.offer=spin(); spinTo(G.offer); }
+
+/* slot-reel spin: flicker random nation/era, decelerate, land, then reveal cards */
+function spinTo(o){
+  const nEl=$("dNation"), eEl=$("dEra"), draw=nEl.parentElement;
+  if(!o){ nEl.textContent="—"; eEl.textContent="—"; $("cards").innerHTML="<p style='color:var(--dim)'>No valid players left for open positions.</p>"; return; }
+  SPINNING=true;
+  $("cards").style.opacity=0; $("cards").innerHTML="";
+  $("rerollBtn").disabled=true;
+  draw.classList.remove("land"); draw.classList.add("spinning");
+  let i=0; const steps=22;
+  (function tick(){
+    if(i<steps){
+      nEl.textContent=SPIN_NATIONS[(Math.random()*SPIN_NATIONS.length)|0];
+      eEl.textContent=SPIN_ERAS[(Math.random()*SPIN_ERAS.length)|0];
+      i++;
+      setTimeout(tick, 16 + Math.pow(i/steps,2.6)*240);   // ease-out deceleration
+    } else {
+      nEl.textContent=o.nation; eEl.textContent=o.era;
+      draw.classList.remove("spinning"); draw.classList.add("land");
+      setTimeout(()=>draw.classList.remove("land"),360);
+      SPINNING=false; $("rerollBtn").disabled=G.rerolls<=0;
+      renderCards(o);
+    }
+  })();
+}
+
+function renderCards(o){
+  const hide = G.diff==="expert";
+  $("cards").innerHTML = o.players.map((p,i)=>{
+    const bs=bestOpenSlot(p); const lands=POS_LABEL[G.shape[bs.slot]];
+    const rt = hide ? `<span class="rt">drafts as <b style="color:var(--gold)">${lands}</b></span>`
+                    : `<span class="rt"><b>${rating(p)}</b> · drafts as ${lands}</span>`;
+    return `<div class="card" onclick="pick(${i})">
+       <span class="nm">${p.n}</span>
+       <span class="meta">${p.c} · ${p.e.join("/")}</span>
+       <span>${p.r.map(x=>`<span class="role-chip">${x}</span>`).join(" ")}</span>
+       ${rt}
+     </div>`;
+  }).join("");
+  $("cards").style.opacity=1;
+}
+
+function pick(i){
+  const p = G.offer.players[i]; if(!p) return;
+  const bs = bestOpenSlot(p); if(bs.slot<0) return;
+  G.picks[bs.slot] = {p, f:bs.f};
+  G.used.add(p.n);
+  G.round++;
+  nextRound();
+}
+
+function fitClass(f){ return f>=0.95?"good":f>=0.7?"ok":"bad"; }
+function renderXI(target, reveal){
+  const hide = (G.diff==="expert") && !reveal;
+  $(target).innerHTML = G.shape.map((role,i)=>{
+    const slot=G.picks[i];
+    if(!slot) return `<div class="slot empty"><span class="pos">${POS_LABEL[role]}</span><span class="who" style="color:var(--dim)">— empty —</span></div>`;
+    const p=slot.p;
+    const fitTxt = hide ? "" : `<span class="fit ${fitClass(slot.f)}">${Math.round(slot.f*100)}%</span>`;
+    const rtTxt  = hide ? "" : ` · ${rating(p)}`;
+    return `<div class="slot"><span class="pos">${POS_LABEL[role]}</span>
+       <span class="who">${p.n}<small>${p.c} · ${p.e.join("/")}${rtTxt}</small></span>${fitTxt}</div>`;
+  }).join("");
+}
+function teamStrength(){
+  let s=0,n=0;
+  G.picks.forEach((slot,i)=>{ if(slot){ s += rating(slot.p)*slot.f; n++; } });
+  return n? s/n : 0;
+}
+function renderStrength(){
+  if(G.diff==="expert"){ $("strengthPill").innerHTML="Strength <b>hidden</b>"; return; }
+  const filled=G.picks.filter(Boolean).length;
+  $("strengthPill").innerHTML = filled? `Strength <b>${teamStrength().toFixed(1)}</b>` : "Strength <b>—</b>";
+}
+
+/* ---- simulation: ratings → match results ---- */
+function winProb(team, opp){ return 1/(1+Math.pow(10,(opp-team)/12)); }
+function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
+function randNorm(){ return (Math.random()+Math.random()+Math.random()-1.5)/1.5; } // bounded ~N(0,1)
+
+function setResult(verdict,vclass,record,sub,grid,team,tiles){
+  $("rVerdict").className="verdict "+vclass; $("rVerdict").textContent=verdict;
+  $("rRecord").textContent=record;
+  $("rSub").innerHTML=sub;
+  $("rGrid").textContent=grid;
+  $("rStrength").textContent=team.toFixed(1);
+  renderXI("rXi", true);                 // reveal everything in Expert
+  const mode = G.mode==="wtc" ? "World Test Championship" : "World Cup";
+  G._share = `THE PERFECT XI — ${mode}\n${record}  ${verdict}\n${grid}\nBuild yours: (the-perfect-xi)`;
+  G._card = { mode:G.mode, verdict, vclass, record, team, tiles:tiles||[],
+              xi: G.shape.map((r,i)=>({pos:POS_LABEL[r], name:G.picks[i].p.n, nat:G.picks[i].p.c})) };
+  show("result");
+}
+
+function simulate(){
+  const team = teamStrength();
+  if(G.mode==="wc") simWC(team); else simWTC(team);
+}
+
+/* World Cup — main tournament: 10 teams, single round-robin (9 games),
+   top 4 reach the semi-finals, then the final. Win all 11 → 11–0. */
+function simWC(team){
+  const league=[];
+  for(let i=0;i<9;i++){ const opp=66+clamp(randNorm()*9+9,0,18); league.push(Math.random()<winProb(team,opp)?"W":"L"); }
+  const lw=league.filter(x=>x==="W").length;
+  let above=0; for(let i=0;i<9;i++){ let rw=0; for(let g=0;g<9;g++) if(Math.random()<0.5) rw++; if(rw>lw) above++; } // 9 rivals
+  const rank=above+1, top4=rank<=4;
+  let log=league.slice(), sf=null, fin=null, champ=false;
+  if(top4){
+    sf=Math.random()<winProb(team,82)?"W":"L"; log.push(sf);
+    if(sf==="W"){ fin=Math.random()<winProb(team,84)?"W":"L"; log.push(fin); champ=(fin==="W"); }
+  }
+  const W=log.filter(x=>x==="W").length, L=log.filter(x=>x==="L").length;
+  const grid = league.map(x=>x==="W"?"🟩":"🟥").join("")
+             + (top4? " ╎"+(sf==="W"?"🟩":"🟥") : "")
+             + (sf==="W"? (fin==="W"?"🏆":"🟥") : "");
+  const tiles = league.map(r=>({res:r}));
+  if(top4){ tiles.push({res:sf}); if(sf==="W") tiles.push({res:fin, gold:fin==="W"}); }
+  const ord=n=>n===1?"1st":n===2?"2nd":n===3?"3rd":n+"th";
+  let verdict,vclass,sub;
+  if(champ && L===0){ verdict="11–0 · PERFECT WORLD CUP"; vclass="v-perfect";
+    sub="Topped the group, swept the knockouts — eleven players, eleven wins, not a single defeat. The most perfect campaign in the sport. Immortal."; }
+  else if(champ){ verdict="WORLD CHAMPIONS"; vclass="v-champ";
+    sub=`Won the cup from ${ord(rank)} in the group${L?` — but ${L} defeat${L>1?"s":""} on the way`:""}. Go unbeaten for the 11–0.`; }
+  else if(top4 && sf==="W"){ verdict="RUNNERS-UP"; vclass="v-out";
+    sub=`${ord(rank)} in the group, into the final — and fell at the last. One match from glory.`; }
+  else if(top4){ verdict="SEMI-FINAL EXIT"; vclass="v-out";
+    sub=`Finished ${ord(rank)} of 10 and reached the semis, but couldn't go all the way. Won ${lw} of 9 in the group.`; }
+  else { verdict="GROUP STAGE EXIT"; vclass="v-out";
+    sub=`Won ${lw} of 9 — ${ord(rank)} of 10. Only the top four reach the semi-finals. The dream ends in the group.`; }
+  setResult(verdict,vclass,`${W}–${L}`,sub,grid,team,tiles);
+}
+
+/* World Test Championship — real cycle: 6 series (3 home / 3 away), 2-5 Tests each
+   (league capped at 21), WTC points table (W=12, D=4), top 2 of 9 reach a one-off final */
+function simWTC(team){
+  const HOME=6;                                   // home advantage, rating points
+  let series=[]; for(let i=0;i<6;i++) series.push({home:i<3, len:2+Math.floor(Math.random()*4)});
+  for(let i=series.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [series[i],series[j]]=[series[j],series[i]]; }
+  let total=series.reduce((s,x)=>s+x.len,0);
+  while(total>21){ let k=0; series.forEach((x,i)=>{ if(x.len>series[k].len) k=i; }); series[k].len--; total--; }
+
+  let log=[], W=0,D=0,L=0, pts=0;
+  for(const s of series) for(let m=0;m<s.len;m++){
+    const opp = (68+clamp(randNorm()*8+8,0,16)) + (s.home? -HOME : HOME);  // league opp 68-84, ±home
+    const wp=winProb(team,opp), lp=winProb(opp,team);
+    const db=clamp(0.36-Math.abs(team-opp)/70, 0.08, 0.36);               // closer sides draw more
+    const w=wp*(1-db), l=lp*(1-db), x=Math.random();
+    let r; if(x<w){r="W";W++;pts+=12;} else if(x<1-l){r="D";D++;pts+=4;} else {r="L";L++;}
+    log.push(r);
+  }
+  const played=log.length, pct=pts/(12*played)*100;
+  let above=0; for(let i=0;i<8;i++){ if(clamp(50+randNorm()*14,28,78) > pct) above++; }   // vs 8 rivals
+  const rank=above+1, madeFinal=rank<=2;
+
+  let finalRes=null, champ=false;
+  if(madeFinal){
+    const opp=83, wp=winProb(team,opp), lp=winProb(opp,team);
+    const db=clamp(0.30-Math.abs(team-opp)/70,0.06,0.30);
+    const w=wp*(1-db), l=lp*(1-db), x=Math.random();
+    if(x<w){finalRes="W";champ=true;} else if(x<1-l){finalRes="D";champ=(rank===1);} else finalRes="L";
+  }
+  const totalL=L+(finalRes==="L"?1:0), recW=W+(finalRes==="W"?1:0), recD=D+(finalRes==="D"?1:0);
+  const grid=log.map(x=>x==="W"?"🟩":x==="D"?"⬜":"🟥").join("")
+            + (madeFinal? " ╎"+(finalRes==="W"?"🏆":finalRes==="D"?"⬜":"🟥") : "");
+  const tiles=log.map(r=>({res:r}));
+  if(madeFinal) tiles.push({res:finalRes, gold:champ});
+  const struct=`6 series · 3 home, 3 away · ${played} league Tests + final`;
+  const standing=`Finished <b>${rank===1?"1st":rank===2?"2nd":rank+"th"}</b> on <b>${pct.toFixed(1)}%</b> points.`;
+
+  let verdict,vclass,sub;
+  if(champ && totalL===0){ verdict="WTC CHAMPIONS · UNBEATEN"; vclass="v-perfect";
+    sub=`${standing} Won the mace without losing a single Test across the entire cycle — the rarest run in the game. ${struct}.`; }
+  else if(champ){ verdict="WTC CHAMPIONS"; vclass="v-champ";
+    sub=`${standing} You lifted the mace${totalL?` despite ${totalL} defeat${totalL>1?"s":""}`:""}. Go the whole cycle unbeaten for the perfect run. ${struct}.`; }
+  else if(madeFinal){ verdict="RUNNERS-UP"; vclass="v-out";
+    sub=`${standing} Reached the final and ${finalRes==="L"?"lost it":"couldn't force the win"}. One match from the mace. ${struct}.`; }
+  else { verdict="MISSED THE FINAL"; vclass="v-out";
+    sub=`${standing} Only the top 2 of 9 reach the final — you came up short. ${struct}.`; }
+  setResult(verdict,vclass,`${recW}–${recD}–${totalL}`,sub,grid,team,tiles);
+}
+
+/* ---- shareable result image (canvas, dependency-free, works offline) ---- */
+function roundRect(x,X,Y,w,h,r){ x.beginPath(); x.moveTo(X+r,Y);
+  x.arcTo(X+w,Y,X+w,Y+h,r); x.arcTo(X+w,Y+h,X,Y+h,r); x.arcTo(X,Y+h,X,Y,r); x.arcTo(X,Y,X+w,Y,r); x.closePath(); }
+
+function drawTiles(x, tiles, cx, top, maxW){
+  const sz=40, gap=9, per=Math.max(1, Math.floor((maxW+gap)/(sz+gap)));
+  let y=top;
+  for(let i=0;i<tiles.length;i+=per){
+    const row=tiles.slice(i,i+per), rw=row.length*(sz+gap)-gap; let xx=cx-rw/2;
+    for(const t of row){
+      x.fillStyle = t.gold?"#f4c542" : t.res==="W"?"#19c37d" : t.res==="D"?"#5a7568" : "#e3534f";
+      roundRect(x,xx,y,sz,sz,9); x.fill();
+      if(t.gold){ x.fillStyle="#04140c"; x.textAlign="center"; x.font="700 26px -apple-system,sans-serif"; x.fillText("★", xx+sz/2, y+sz/2+9); }
+      xx+=sz+gap;
+    }
+    y+=sz+gap;
+  }
+  return y;
+}
+
+function drawShareCard(c){
+  const W=1000, H=1500, cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const x=cv.getContext("2d");
+  const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#16271d"); g.addColorStop(1,"#0c1410");
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.strokeStyle="#26402f"; x.lineWidth=4; roundRect(x,24,24,W-48,H-48,28); x.stroke();
+  x.textAlign="center";
+  x.fillStyle="#e8f3ec"; x.font="800 46px ui-monospace,Menlo,monospace"; x.fillText("THE PERFECT XI", W/2, 122);
+  x.fillStyle="#8fae9d"; x.font="600 27px -apple-system,Segoe UI,sans-serif";
+  x.fillText(c.mode==="wtc"?"World Test Championship":"World Cup", W/2, 170);
+  const vcol = c.vclass==="v-perfect"?"#f4c542" : c.vclass==="v-champ"?"#19c37d" : "#9fb9aa";
+  x.fillStyle=vcol; x.font="800 36px ui-monospace,Menlo,monospace"; x.fillText(c.verdict, W/2, 256);
+  x.fillStyle="#e8f3ec"; x.font="800 150px ui-monospace,Menlo,monospace"; x.fillText(c.record, W/2, 442);
+  x.fillStyle="#8fae9d"; x.font="500 24px -apple-system,sans-serif"; x.fillText("team rating "+c.team.toFixed(1), W/2, 490);
+  const ty = drawTiles(x, c.tiles, W/2, 544, W-180);
+  const top = Math.max(ty+44, 706);
+  x.fillStyle="#8fae9d"; x.textAlign="center"; x.font="700 24px ui-monospace,monospace"; x.fillText("— YOUR XI —", W/2, top);
+  let yy=top+52;
+  for(const m of c.xi){
+    x.textAlign="left";  x.fillStyle="#8fae9d"; x.font="600 20px ui-monospace,monospace"; x.fillText(m.pos.toUpperCase(), 110, yy);
+    x.fillStyle="#e8f3ec"; x.font="600 29px -apple-system,Segoe UI,sans-serif"; x.fillText(m.name, 250, yy);
+    x.textAlign="right"; x.fillStyle="#8fae9d"; x.font="500 22px -apple-system,sans-serif"; x.fillText(m.nat, W-110, yy);
+    yy+=48;
+  }
+  x.textAlign="center"; x.fillStyle="#19c37d"; x.font="600 25px -apple-system,sans-serif"; x.fillText("can your all-time XI go unbeaten?", W/2, H-66);
+  return cv;
+}
+
+async function shareImage(){
+  let cv; try{ cv=drawShareCard(G._card); }catch(e){ toast("couldn't build image"); return; }
+  cv.toBlob(async (blob)=>{
+    if(!blob){ toast("image failed"); return; }
+    const file=new File([blob],"perfect-xi.png",{type:"image/png"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:"The Perfect XI", text:G._share}); return; }
+      catch(e){ if(e && e.name==="AbortError") return; }   // user dismissed the sheet
+    }
+    if(navigator.clipboard && window.ClipboardItem){
+      try{ await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]); toast("image copied to clipboard"); return; }catch(e){}
+    }
+    const url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url; a.download="perfect-xi.png"; a.click(); URL.revokeObjectURL(url); toast("image downloaded");
+  }, "image/png");
+}
+
+function copyResult(){ navigator.clipboard?.writeText(G._share).then(()=>toast("copied to clipboard"),()=>toast("copy failed")); }
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),1500); }
+function resetGame(){ G=null; route("home"); }
+
+/* boot: honour an initial #hash; guards bounce protected screens to home when there's no game */
+(function init(){
+  const id=(location.hash||"#home").slice(1)||"home";
+  route(id,false);
+  history.replaceState({screen:currentScreen()}, "", "#"+currentScreen());
+})();
+</script>
+</body>
+</html>
