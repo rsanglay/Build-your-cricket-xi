@@ -200,6 +200,42 @@
   .rx-k{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
   .rx-award b{font-size:14px;font-weight:700}
   .rx-v{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--green)}
+
+  /* ---- tournament / share UX (Phase 2) ---- */
+  .share-card{background:var(--panel2);border:1px solid var(--green);border-radius:14px;padding:16px;margin:14px 0 0}
+  .share-head{font-weight:700;color:var(--green);margin-bottom:10px;text-align:center}
+  .share-code{font-family:var(--mono);background:var(--bg);border:1px dashed var(--green);border-radius:10px;padding:12px;color:var(--ink);word-break:break-all;text-align:center;cursor:pointer;margin-bottom:12px;font-size:15px;letter-spacing:1px}
+  .share-hint{font-size:12px;color:var(--dim);margin:10px 0 0;text-align:center}
+  .codefield{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--ink);font-family:var(--mono);font-size:14px}
+  .codefield:focus{outline:none;border-color:var(--green)}
+  .code-error{color:var(--red);font-size:13px;min-height:1.1em;margin:8px 0}
+  .team-list{list-style:none;padding:0;margin:6px 0 14px;display:flex;flex-direction:column;gap:8px}
+  .team-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .team-row .tflag{font-size:18px;flex:none}
+  .team-row .tnm{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .team-row .tyou{font-size:10px;background:var(--green);color:#04140c;border-radius:6px;padding:2px 6px;font-weight:700;flex:none}
+  .team-row .tstr{font-family:var(--mono);color:var(--green);font-weight:700;flex:none}
+  .team-row .trm{background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;flex:none;padding:0 4px}
+  .champ-banner{text-align:center;font-size:22px;font-weight:800;color:var(--gold);background:linear-gradient(180deg,#16271d,var(--bg));border:1px solid var(--gold);border-radius:14px;padding:18px;margin-bottom:14px}
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tabs .tab{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:10px;padding:9px;font-weight:600;font-size:13px}
+  .tabs .tab.on{background:var(--green);color:#04140c;border-color:var(--green)}
+  .ttbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
+  .ttbl th,.ttbl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+  .ttbl th{color:var(--dim);font-size:10px;text-transform:uppercase;font-family:var(--mono)}
+  .ttbl td:not(:first-child),.ttbl th:not(:first-child){text-align:right;font-family:var(--mono)}
+  .ttbl tr.tai td{color:var(--dim)}
+  .tgrp{font-family:var(--mono);font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px}
+  .bx{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .bx .bxr{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
+  .bx .bxf{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .bx .bw{color:var(--green);font-weight:700} .bx .bl{color:var(--dim)}
+  .bx .bvs{color:var(--dim);font-size:11px;flex:none}
+  .bx .bxs{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:5px}
+  .award-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .award-row .ttl{font-family:var(--mono);font-size:10px;color:var(--gold);text-transform:uppercase}
+  .award-row .who{font-weight:700} .award-row .who i{font-style:normal;font-size:11px;color:var(--dim)}
+  .award-row .aval{margin-left:auto;font-family:var(--mono);color:var(--green);font-weight:700;flex:none}
 </style>
 </head>
 <body>
@@ -232,6 +268,10 @@
         <h3>World Test Championship</h3>
         <small>Build a Test XI. Survive a 6-series cycle — home and away — finish top two of nine, win the one-off final. Go the whole cycle unbeaten for the perfect mace.</small>
       </div>
+    </div>
+    <div class="stage" style="margin-top:14px;text-align:center">
+      <button class="btn" style="width:100%" onclick="openTournament()">🏆 Play a tournament with friends</button>
+      <p style="color:var(--dim);font-size:13px;margin:10px 0 0">Draft your XI, share your code, then play a World Cup or WTC bracket against your friends' teams — all in the browser, no sign-up.</p>
     </div>
     <div class="foot">
       Inspired by <a href="https://www.82-0.com" target="_blank" rel="noopener">82-0</a> (NBA) &amp;
@@ -305,6 +345,15 @@
         <button class="btn ghost" onclick="copyResult()">📋 copy text</button>
         <button class="btn ghost" onclick="resetGame()">play again</button>
       </div>
+      <div class="share-card" id="shareCard" style="display:none">
+        <div class="share-head">Share your XI</div>
+        <div class="share-code" id="shareCode" onclick="copyShare()" title="Tap to copy">—</div>
+        <div class="row" style="justify-content:center">
+          <button class="btn ghost" onclick="copyShare()">📋 copy code</button>
+          <button class="btn" onclick="openTournament()">🏆 play tournament</button>
+        </div>
+        <p class="share-hint">Send this code to a friend — they paste it into Tournament to add your XI.</p>
+      </div>
     </div>
     <div class="stage">
       <details class="rx-results" open>
@@ -318,6 +367,41 @@
         <span class="pill">Team strength <b id="rStrength">—</b></span></div>
       <div class="balance" id="balanceBox"></div>
       <ol class="ladder" id="rXi"></ol>
+    </div>
+  </section>
+
+  <!-- TOURNAMENT -->
+  <section id="tournament" class="scr">
+    <div class="brand"><h1 style="font-size:32px">Tournament</h1>
+      <p>Add up to 7 friends' XI codes. Empty seats are filled with AI teams.</p></div>
+    <div class="stage">
+      <div class="row" style="gap:8px">
+        <input id="codeBox" class="codefield" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a friend's XI code or link…">
+        <button class="btn" onclick="addCodeFromBox()">Add</button>
+      </div>
+      <div id="codeError" class="code-error"></div>
+      <ul id="teamList" class="team-list"></ul>
+      <button class="btn" id="btnRunTourney" style="width:100%" disabled onclick="runTourneyFromTeams()">Add at least 2 teams</button>
+      <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="show('home')">← back</button></div>
+    </div>
+  </section>
+
+  <!-- TOURNAMENT RESULT -->
+  <section id="tourneyResult" class="scr">
+    <div class="stage result">
+      <div class="champ-banner" id="champBanner"></div>
+      <div class="tabs" id="resTabs">
+        <button class="tab on" data-t="standings" onclick="tourneyTab('standings')">Standings</button>
+        <button class="tab" data-t="bracket" onclick="tourneyTab('bracket')">Knockout</button>
+        <button class="tab" data-t="awards" onclick="tourneyTab('awards')">Awards</button>
+      </div>
+      <div id="tabStandings" class="tab-pane"></div>
+      <div id="tabBracket" class="tab-pane" hidden></div>
+      <div id="tabAwards" class="tab-pane" hidden></div>
+      <div class="row" style="justify-content:center;margin-top:14px">
+        <button class="btn ghost" onclick="show('tournament')">← teams</button>
+        <button class="btn ghost" onclick="goHome()">home</button>
+      </div>
     </div>
   </section>
 
@@ -747,7 +831,7 @@ let G = null;
 const $ = id => document.getElementById(id);
 
 /* ---- navigation / hash router (browser back & forward work) ---- */
-const FLOW = {home:null, setup:"home", draft:"setup", result:"home"};
+const FLOW = {home:null, setup:"home", draft:"setup", result:"home", tournament:"home", tourneyResult:"tournament"};
 function currentScreen(){ const el=[...document.querySelectorAll(".scr")].find(x=>x.classList.contains("on")); return el?el.id:"home"; }
 function crumbFor(id){
   const m = G ? (G.mode==="wtc"?"World Test Championship":"World Cup") : "";
@@ -761,6 +845,7 @@ function route(id, push=true){
   clearReveal();                                              // stop any game-by-game reveal in flight
   if((id==="setup"||id==="draft") && !G) id="home";          // guard deep-links / stale forward
   if(id==="result" && !(G && G._share)) id="home";
+  if(id==="tourneyResult" && !TOURNAMENT) id="home";
   document.querySelectorAll(".scr").forEach(x=>x.classList.remove("on"));
   $(id).classList.add("on");
   $("nav").style.display = id==="home" ? "none" : "flex";
@@ -1069,7 +1154,7 @@ function accrue(sc){
   bowlInns.forEach(inn=>inn.forEach(b=>{ if(b.wkts>0){ ent(G.picks[b.i].p.n).wkts+=b.wkts; seen.add(G.picks[b.i].p.n); } }));
   seen.forEach(n=>ent(n).mat++);
 }
-function findPlayer(n){ const sl=G.picks.find(s=>s&&s.p.n===n); return sl?sl.p:null; }
+function findPlayer(n){ const sl=G.picks&&G.picks.find(s=>s&&s.p.n===n); return sl?sl.p:null; }
 function computeAwards(){
   const arr=Object.entries(G.box||{}).map(([n,s])=>{ const p=findPlayer(n);
     return {n,...s, abbr:p?(NAT_ABBR[p.c]||p.c):"", stripe:p?(STRIPE[p.c]||"#26402f"):"#26402f"}; });
@@ -1138,6 +1223,10 @@ function finishReveal(){
   $("rSub").innerHTML=c._sub||"";
   $("rGrid").textContent=c._grid||"";
   renderResultExtras();                                                // full list + awards + record
+  if(G.picks && G.picks.every(Boolean)){                               // offer the share code
+    G.shareCode=encodeXI(G.mode, G.picks.map(pk=>pk.p));
+    $("shareCode").textContent=G.shareCode; $("shareCard").style.display="block";
+  }
 }
 function awardsHTML(a){
   const card=(k,p,v)=> p?`<div class="rx-award"><span class="rx-k">${k}</span>
@@ -1152,6 +1241,172 @@ function awardsHTML(a){
      ${card("Most 50s",a.fifties,a.fifties&&a.fifties.fifties)}
      ${card("Most 100s",a.hundreds,a.hundreds&&a.hundreds.hundreds)}
    </div>`;
+}
+
+/* ===== shareable-code multiplayer (Phase 2) — the code IS the transport, no backend =====
+   DB IS APPEND-ONLY: new players push to the END, never reordered/deleted/index-reused, so a
+   player's DB index is a stable id forever. Breaking that silently invalidates every shared code
+   — bump CODEC_VERSION + ship a remap instead. DB.length must stay <= 512 (9-bit ids). */
+const CODEC_VERSION=1, MODE_CODE={wc:0,wtc:1}, MODE_NAME=["wc","wtc"], ID_BITS=9, PAYLOAD_BYTES=15;
+if(DB.length>512) console.warn("Perfect XI: DB exceeds 512 players — share-codes need >9-bit ids (bump CODEC_VERSION).");
+const _b64=s=>btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+function _unb64(s){ s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; return atob(s); }
+function fletcher8(bytes,upTo){ let a=0,b=0; for(let i=0;i<upTo;i++){ a=(a+bytes[i])%255; b=(b+a)%255; } return ((b<<4)^a)&0xff; }
+
+function encodeXI(mode, players){            // players = 11 player objects in slot order
+  const ids=players.map(p=>DB.indexOf(p));
+  const bytes=new Uint8Array(PAYLOAD_BYTES);
+  bytes[0]=(CODEC_VERSION<<4)|MODE_CODE[mode];
+  let acc=0,bits=0,bi=1;
+  for(const id of ids){ acc=(acc<<ID_BITS)|(id&0x1ff); bits+=ID_BITS;
+    while(bits>=8){ bits-=8; bytes[bi++]=(acc>>bits)&0xff; } }
+  if(bits>0) bytes[bi++]=(acc<<(8-bits))&0xff;
+  bytes[14]=fletcher8(bytes,14);
+  let bin=""; for(const x of bytes) bin+=String.fromCharCode(x);
+  return _b64(bin);
+}
+function decodeXI(raw){                       // pure TOTAL function: never throws, never evals
+  try{
+    const code=(raw||"").trim().replace(/[^A-Za-z0-9_-]+$/,"");   // strip glued trailing punctuation
+    if(!/^[A-Za-z0-9_-]+$/.test(code)) return {ok:false,error:"This code has invalid characters — it may have been corrupted when copied."};
+    const bin=_unb64(code);
+    if(bin.length!==PAYLOAD_BYTES) return {ok:false,error:"This code is the wrong length — it looks incomplete or from a different version."};
+    const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+    const ver=bytes[0]>>4, modeBits=bytes[0]&0x0f;
+    if(ver>CODEC_VERSION) return {ok:false,error:"This code was made by a newer version of the app. Update to open it."};
+    if(modeBits>1) return {ok:false,error:"Unrecognised team mode in this code."};
+    if(fletcher8(bytes,14)!==bytes[14]) return {ok:false,error:"This code seems corrupted (failed integrity check). Ask your friend to resend it."};
+    const ids=[]; let acc=0,bits=0,bi=1;
+    while(ids.length<11){ acc=(acc<<8)|bytes[bi++]; bits+=8; if(bits>=ID_BITS){ bits-=ID_BITS; ids.push((acc>>bits)&0x1ff); } }
+    const bad=ids.map((id,i)=>id>=DB.length?i+1:null).filter(x=>x);
+    if(bad.length) return {ok:false,error:`Unknown player(s) in slots ${bad.join(", ")} — this code may be from an older squad list.`};
+    const mode=MODE_NAME[modeBits], shape=SHAPES[mode];
+    const players=ids.map(id=>DB[id]);
+    const picks=ids.map((id,i)=>({p:DB[id], f:fit(DB[id], shape[i])}));
+    picks._mode=mode;
+    const seen=new Set(); const dup=ids.some(id=>seen.has(id)||(seen.add(id),false));
+    return {ok:true, mode, players, picks, warn: dup?"This XI has a duplicated player.":null};
+  }catch(e){ return {ok:false,error:"This code could not be read — it may be incomplete or corrupted."}; }
+}
+
+/* ---- tournament engine: real XIs through group+knockout, reusing the solo match engine.
+   Math.random is seeded from the codes for the duration so the SAME codes always yield the
+   SAME tournament (consistent truth with no backend). ---- */
+function mulberry32(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function strengthOf(picks){ const prev=G; G={picks, mode:(picks._mode||(prev&&prev.mode)||"wc")}; const v=teamStrength(); G=prev; return v; }
+
+function accrueBox(picks, batInns, bowlInns){           // like accrue(), but for an explicit team's picks
+  const seen=new Set();
+  batInns.forEach(inn=>inn.forEach(b=>{ const p=picks[b.i].p, e=ent(p.n); e.runs+=b.runs;
+    if(b.runs>=100)e.hundreds++; else if(b.runs>=50)e.fifties++; seen.add(p.n); }));
+  bowlInns.forEach(inn=>inn.forEach(b=>{ if(b.wkts>0){ ent(picks[b.i].p.n).wkts+=b.wkts; seen.add(picks[b.i].p.n); } }));
+  seen.forEach(n=>ent(n).mat++);
+}
+function mpAccrue(team, inningsTotals, wktsTaken){       // attribute one fixture's box to a real team
+  if(!team.picks) return;                                // AI teams have no players
+  const sp=G.picks, ss=G.shape, sm=G.mode;
+  G.picks=team.picks; G.shape=SHAPES[team.mode]; G.mode=team.mode;   // batWeights/rating read these
+  try{
+    const batInns=inningsTotals.map(t=>allocRuns(Math.max(1,Math.round(t))));
+    const bowl=[allocWickets(clamp(Math.round(wktsTaken),0,20))];
+    accrueBox(team.picks, batInns, bowl);
+  } finally { G.picks=sp; G.shape=ss; G.mode=sm; }
+}
+
+function tOdi(a,b,res){
+  const aFirst=Math.random()<0.5, fStr=aFirst?a.strength:b.strength;
+  const ft=Math.round(clamp(gauss(250+(fStr-77)*2.4,24),90,430));
+  const firstWins=(aFirst===(res==="W")), fW=clamp(Math.round(gauss(7,1.8)),4,10);
+  let st,sW,by,margin;
+  if(firstWins){ st=Math.round(clamp(gauss(ft-45,40),Math.max(40,ft-130),ft-1)); sW=10; by="runs"; margin=ft-st; }
+  else { sW=clamp(Math.round(gauss(5,2)),1,9); st=ft+1+(Math.random()*8|0); by="wkts"; margin=10-sW; }
+  const aRuns=aFirst?ft:st, aW=aFirst?fW:sW, bRuns=aFirst?st:ft, bW=aFirst?sW:fW;
+  return {aInns:[aRuns], bInns:[bRuns], aWkLost:aW, bWkLost:bW, by, margin, line:`${aRuns}/${aW} – ${bRuns}/${bW}`};
+}
+function tTest(a,b,res){
+  const tt=(s,base)=>Math.round(clamp(gauss(base+(s-77)*3,70),80,620));
+  if(res==="D"){ const a1=tt(a.strength,330),a2=tt(a.strength,300),b1=tt(b.strength,330),b2=tt(b.strength,300);
+    return {aInns:[a1,a2],bInns:[b1,b2],aWkLost:clamp(Math.round(gauss(12,3)),6,18),bWkLost:clamp(Math.round(gauss(12,3)),6,18),by:"draw",margin:0,line:`${a1} & ${a2} v ${b1} & ${b2}`}; }
+  const aWins=res==="W", wS=aWins?a.strength:b.strength, lS=aWins?b.strength:a.strength, gap=Math.abs(a.strength-b.strength);
+  if(gap>10 && Math.random()<clamp(0.10+gap*0.012,0,0.30)){
+    const wBig=Math.round(clamp(gauss(480+(wS-77)*3,60),320,680));
+    let l1=Math.round(clamp(gauss(190,40),70,300)), l2=Math.round(clamp(gauss(190,40),70,300));
+    const cap=wBig-(12+(Math.random()*68|0)); if(l1+l2>cap){ const k=cap/(l1+l2); l1=Math.max(40,Math.round(l1*k)); l2=Math.max(30,Math.round(l2*k)); }
+    const margin=Math.max(1,wBig-(l1+l2)), wInns=[wBig], lInns=[l1,l2];
+    return {aInns:aWins?wInns:lInns, bInns:aWins?lInns:wInns, by:"innings", margin,
+            aWkLost:aWins?clamp(Math.round(gauss(6,2)),2,10):20, bWkLost:aWins?20:clamp(Math.round(gauss(6,2)),2,10),
+            line:`${(aWins?wInns:lInns).join(" & ")} v ${(aWins?lInns:wInns).join(" & ")}`}; }
+  const w1=tt(wS,330), w2=tt(wS,300), l1=tt(lS,320);
+  let by,margin,l2,wWk=0;
+  if(Math.random()<0.5){ by="wkts"; wWk=clamp(Math.round(gauss(5,2)),1,9); margin=10-wWk; l2=Math.round(clamp(gauss(300,60),100,540)); }
+  else { by="runs"; const lead=(w1+w2)-l1; l2=Math.round(clamp(gauss(lead-120,50),20,Math.max(21,lead-1))); margin=Math.max(1,lead-l2); }
+  const wInns=[w1,w2], lInns=[l1,l2];
+  const wLost = by==="wkts" ? clamp(wWk+2+(Math.random()*5|0),1,20) : clamp(Math.round(gauss(13,3)),7,20);
+  return {aInns:aWins?wInns:lInns, bInns:aWins?lInns:wInns, by, margin,
+          aWkLost: aWins?wLost:20, bWkLost: aWins?20:wLost,
+          line:`${(aWins?wInns:lInns).join(" & ")} v ${(aWins?lInns:wInns).join(" & ")}`};
+}
+function tFixture(a,b,mode,isFinal){
+  let res, winner=null, loser=null;
+  if(mode==="wtc" && !isFinal && Math.random()<Math.max(0.05,0.32-Math.abs(a.strength-b.strength)*0.02)){ res="D"; }
+  else { const aWins=Math.random()<winProb(a.strength,b.strength); res=aWins?"W":"L"; winner=aWins?a:b; loser=aWins?b:a; }
+  const rec = mode==="wc" ? tOdi(a,b,res) : tTest(a,b,res);
+  mpAccrue(a, rec.aInns, rec.bWkLost);                   // a took b's wickets
+  mpAccrue(b, rec.bInns, rec.aWkLost);
+  let marginText;
+  if(res==="D") marginText="match drawn";
+  else if(rec.by==="innings") marginText=`${winner.name} won by an innings & ${rec.margin} runs`;
+  else marginText=`${winner.name} won by ${rec.margin} ${rec.by==="runs"?"runs":"wkts"}`;
+  return {a,b,mode,isFinal:!!isFinal,result:res,winner,loser,by:rec.by,margin:rec.margin,marginText,line:rec.line};
+}
+function makeAITeam(i, lo, hi){
+  const mid=(lo+hi)/2, spread=Math.max(6,hi-lo);
+  return {id:"ai"+i, name:"AI "+String.fromCharCode(65+i), flag:"🤖", picks:null, isAI:true,
+          strength:Math.round(clamp(mid+(Math.random()*spread-spread/2),55,96))};
+}
+function padToEight(teams){
+  const field=teams.slice(), real=field.filter(t=>!t.isAI).map(t=>t.strength);
+  const lo=real.length?Math.min(...real):62, hi=real.length?Math.max(...real):82;
+  let i=0; while(field.length<8) field.push(makeAITeam(i++,lo,hi));
+  return field;
+}
+let TOURNAMENT=null;
+function runTournament(hostMode, teams, seedSrc){
+  const prevG=G, _mr=Math.random; Math.random=mulberry32(hashStr(seedSrc||"seed"));
+  G={picks:null, mode:hostMode, box:{}};                 // transient working state — never clobbers the solo game
+  try{
+    const field=padToEight(teams);
+    const owner={}, pmap={};
+    field.forEach(t=>{ if(t.picks) t.picks.forEach(pk=>{ owner[pk.p.n]=t.name; pmap[pk.p.n]=pk.p; }); });
+    const t={mode:hostMode, fixtures:[], standings:null, bracket:[], champion:null, owner, pmap, field};
+    if(hostMode==="wc"){
+      const sd=[...field].sort((x,y)=>y.strength-x.strength);
+      const A=[sd[0],sd[3],sd[4],sd[7]], B=[sd[1],sd[2],sd[5],sd[6]];
+      const pts=Object.fromEntries(field.map(x=>[x.id,{w:0,d:0,l:0,pts:0,team:x}]));
+      const playGroup=g=>{ for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){ const f=tFixture(g[i],g[j],"wc"); t.fixtures.push(f);
+        pts[f.winner.id].w++; pts[f.winner.id].pts+=2; pts[f.loser.id].l++; } };
+      playGroup(A); playGroup(B);
+      const tbl=g=>g.map(x=>pts[x.id]).sort((p,q)=>q.pts-p.pts||q.team.strength-p.team.strength);
+      const tA=tbl(A), tB=tbl(B);
+      const sfA=tFixture(tA[0].team,tB[1].team,"wc",true); t.fixtures.push(sfA);
+      const sfB=tFixture(tB[0].team,tA[1].team,"wc",true); t.fixtures.push(sfB);
+      const fin=tFixture(sfA.winner,sfB.winner,"wc",true); t.fixtures.push(fin);
+      t.standings={A:tA,B:tB}; t.bracket=[{round:"Semi-final",fx:sfA},{round:"Semi-final",fx:sfB},{round:"Final",fx:fin}];
+      t.champion=fin.winner;
+    } else {
+      const WIN=12,DRAW=4, pts=Object.fromEntries(field.map(x=>[x.id,{w:0,d:0,l:0,P:0,pts:0,team:x}]));
+      for(let i=0;i<field.length;i++)for(let j=i+1;j<field.length;j++){ const f=tFixture(field[i],field[j],"wtc"); t.fixtures.push(f);
+        const X=pts[field[i].id],Y=pts[field[j].id]; X.P++;Y.P++;
+        if(f.result==="D"){X.d++;Y.d++;X.pts+=DRAW;Y.pts+=DRAW;} else {pts[f.winner.id].w++;pts[f.winner.id].pts+=WIN;pts[f.loser.id].l++;} }
+      const pct=r=>r.P?r.pts/(r.P*WIN):0;
+      const table=Object.values(pts).sort((p,q)=>pct(q)-pct(p)||q.team.strength-p.team.strength).map(r=>({...r,pct:+(pct(r)*100).toFixed(1)}));
+      const fin=tFixture(table[0].team,table[1].team,"wtc",true); t.fixtures.push(fin);
+      t.standings=table; t.bracket=[{round:"WTC Final",fx:fin}]; t.champion=fin.winner;
+    }
+    t.awards=computeAwards();
+    TOURNAMENT=t; return t;
+  } finally { Math.random=_mr; G=prevG; }
 }
 
 function setResult(verdict,vclass,record,sub,grid,team,tiles){
@@ -1369,8 +1624,91 @@ function copyResult(){ navigator.clipboard?.writeText(G._share).then(()=>toast("
 function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),1500); }
 function resetGame(){ G=null; route("home"); }
 
-/* boot: honour an initial #hash; guards bounce protected screens to home when there's no game */
+/* ---- tournament UX: build a field from pasted codes, run it, render ---- */
+let T={teams:[]};
+function teamNameFor(picks){ const tal={}; picks.forEach(pk=>tal[pk.p.c]=(tal[pk.p.c]||0)+1);
+  const top=Object.entries(tal).sort((a,b)=>b[1]-a[1])[0][0]; return (NAT_ABBR[top]||top)+" Select"; }
+function openTournament(){
+  if(!T.teams.some(t=>t.you) && G && G.picks && G.picks.every(Boolean)){     // seed YOUR drafted XI
+    const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode;
+    T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p)), mode:G.mode, picks,
+      players:G.picks.map(p=>p.p), name:"Your XI", flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
+  }
+  renderTeams(); show("tournament");
+}
+function addCodeFromBox(){ addCode($("codeBox").value); }
+function addCode(raw){
+  const err=$("codeError"); err.textContent="";
+  let code=(raw||"").trim(); const m=code.match(/[#&]?t=([A-Za-z0-9_-]+)/); if(m) code=m[1];
+  if(!code) return;
+  if(T.teams.length>=8){ err.textContent="Tournament is full (8 teams)."; return; }
+  if(T.teams.some(t=>t.code===code)){ err.textContent="You already added this XI."; return; }
+  const d=decodeXI(code);
+  if(!d.ok){ err.textContent=d.error; return; }
+  T.teams.push({id:"p"+T.teams.length, code, mode:d.mode, picks:d.picks, players:d.players,
+    name:teamNameFor(d.picks), flag:(FLAG[d.picks[0].p.c]||"🏏"), strength:Math.round(strengthOf(d.picks)), isAI:false});
+  if($("codeBox")) $("codeBox").value="";
+  if(d.warn) err.textContent="⚠ "+d.warn;
+  renderTeams();
+}
+function removeTeam(i){ if(T.teams[i] && !T.teams[i].you){ T.teams.splice(i,1); renderTeams(); } }
+function renderTeams(){
+  const real=T.teams.filter(t=>!t.isAI).length;
+  $("teamList").innerHTML = T.teams.length ? T.teams.map((t,i)=>`<li class="team-row">
+    <span class="tflag">${t.flag}</span><span class="tnm">${t.name}</span>
+    ${t.you?'<span class="tyou">YOU</span>':''}<span class="tstr">${t.strength}</span>
+    ${t.you?'':`<button class="trm" onclick="removeTeam(${i})" aria-label="remove">×</button>`}</li>`).join("")
+    : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — paste a friend's code above.</li>`;
+  const btn=$("btnRunTourney"); btn.disabled=real<2;
+  btn.textContent = real<2 ? "Add at least 2 teams" : `Run tournament — ${real} real${T.teams.length<8?` + ${8-T.teams.length} AI`:""}`;
+}
+function runTourneyFromTeams(){
+  if(T.teams.filter(t=>!t.isAI).length<2) return;
+  runTournament(T.teams[0].mode, T.teams, T.teams.map(t=>t.code).join("."));
+  renderTournamentResult(); show("tourneyResult");
+}
+function copyShare(){ if(G&&G.shareCode) navigator.clipboard?.writeText(G.shareCode).then(()=>toast("code copied"),()=>toast("copy failed")); }
+function tourneyTab(name){
+  ["Standings","Bracket","Awards"].forEach(n=>{ const el=$("tab"+n); if(el) el.hidden=(n.toLowerCase()!==name); });
+  document.querySelectorAll("#resTabs .tab").forEach(b=> b.classList.toggle("on", b.getAttribute("data-t")===name));
+}
+function renderTournamentResult(){
+  const t=TOURNAMENT; if(!t){ show("home"); return; }
+  $("champBanner").innerHTML=`🏆 ${t.champion.flag} <b>${t.champion.name}</b><div style="font-size:12px;color:var(--dim);font-weight:400;margin-top:4px">${t.mode==="wtc"?"WTC":"World Cup"} Champion</div>`;
+  let st="";
+  if(t.mode==="wc"){
+    const grp=(label,rows)=>`<div class="tgrp">${label}</div><table class="ttbl"><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr>${rows.map(r=>`<tr class="${r.team.isAI?'tai':''}"><td>${r.team.flag} ${r.team.name}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td></tr>`).join("")}</table>`;
+    st=grp("Group A",t.standings.A)+grp("Group B",t.standings.B);
+  } else {
+    st=`<table class="ttbl"><tr><th>Team</th><th>W</th><th>D</th><th>L</th><th>PCT</th></tr>${t.standings.map(r=>`<tr class="${r.team.isAI?'tai':''}"><td>${r.team.flag} ${r.team.name}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.pct}%</td></tr>`).join("")}</table>`;
+  }
+  $("tabStandings").innerHTML=st;
+  $("tabBracket").innerHTML=t.bracket.map(b=>{ const f=b.fx;
+    return `<div class="bx"><div class="bxr">${b.round}</div>
+      <div class="bxf"><span class="${f.winner===f.a?'bw':'bl'}">${f.a.flag} ${f.a.name}</span><span class="bvs">v</span><span class="${f.winner===f.b?'bw':'bl'}">${f.b.name} ${f.b.flag}</span></div>
+      <div class="bxs">${f.line} · ${f.marginText}</div></div>`; }).join("");
+  const a=t.awards, own=n=>t.owner[n]?` <i>${t.owner[n]}</i>`:"";
+  const aw=(ttl,p,v)=> (p&&v!=null&&v!=="")?`<div class="award-row"><div><div class="ttl">${ttl}</div><div class="who">${p.n}${own(p.n)}</div></div><div class="aval">${v}</div></div>`:"";
+  $("tabAwards").innerHTML = a ? (
+    aw("Player of the Tournament",a.potm,`${a.potm.runs} runs · ${a.potm.wkts} wkts`)+
+    aw("Most runs",a.runs,a.runs.runs+" runs")+
+    aw("Most wickets",a.wkts,a.wkts.wkts+" wkts")+
+    aw("Most 50s",a.fifties,a.fifties&&a.fifties.fifties)+
+    aw("Most 100s",a.hundreds,a.hundreds&&a.hundreds.hundreds)
+  ) : "<p style='color:var(--dim)'>No awards.</p>";
+  tourneyTab("standings");
+}
+function importFromHash(){
+  const h=(location.hash||"").slice(1);
+  const t=h.match(/^t=([A-Za-z0-9_-]+)/), g=h.match(/^g=([A-Za-z0-9_.\-]+)/);
+  if(t){ addCode(t[1]); openTournament(); return true; }
+  if(g){ g[1].split(".").forEach(c=>addCode(c)); openTournament(); return true; }
+  return false;
+}
+
+/* boot: import a shared #t=/#g= code, else honour an initial #hash; guards bounce protected screens home */
 (function init(){
+  if(importFromHash()){ history.replaceState({screen:currentScreen()}, "", "#"+currentScreen()); return; }
   const id=(location.hash||"#home").slice(1)||"home";
   route(id,false);
   history.replaceState({screen:currentScreen()}, "", "#"+currentScreen());
