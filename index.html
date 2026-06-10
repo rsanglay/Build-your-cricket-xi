@@ -117,6 +117,55 @@
   .toast.on{opacity:1}
   .foot{text-align:center;color:var(--dim);font-size:12px;margin:22px 0 6px;line-height:1.5}
   .foot a{color:var(--green)}
+
+  /* ---- progress rail (P1.5) ---- */
+  .rail{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+  .pips{display:flex;gap:5px}
+  .pip{width:17px;height:6px;border-radius:3px;background:var(--line);transition:.25s}
+  .pip.filled{background:var(--green)}
+  .pip.just{animation:pippop .4s ease}
+  @keyframes pippop{0%{transform:scaleY(2.4);background:var(--gold)}100%{transform:scaleY(1)}}
+  .railcount{font-family:var(--mono);font-size:12px;color:var(--dim)} .railcount b{color:var(--ink)}
+  .rerollpips{font-family:var(--mono);font-size:13px;color:var(--gold);letter-spacing:1px;margin-left:auto}
+
+  /* ---- batting-order ladder (P0.1) ---- */
+  .ladder{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .rung{display:flex;align-items:center;gap:10px;background:var(--panel2);
+        border:1px solid var(--line);border-left:3px solid var(--stripe,#26402f);
+        border-radius:10px;padding:8px 12px;min-height:44px}
+  .rung.empty{background:transparent;border-style:dashed;opacity:.45}
+  .rung .ord{font-family:var(--mono);font-size:12px;color:var(--dim);width:16px;flex:none;text-align:right}
+  .rung .rname{flex:1;min-width:0;font-size:14px;font-weight:600;line-height:1.3;overflow:hidden}
+  .rung .rname small{display:block;font-weight:400;color:var(--dim);font-family:var(--mono);font-size:10px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rung .badges{font-size:12px}
+  .tdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:5px;vertical-align:middle}
+  .tdot.pace{background:var(--red)} .tdot.spin{background:#b07cff}
+  .rung .rrt{font-family:var(--mono);font-size:13px;color:var(--dim);flex:none}
+  .rung .fit{font-family:var(--mono);font-size:11px;flex:none;min-width:36px;text-align:right}
+  .seam{list-style:none;display:flex;align-items:center;gap:10px;color:var(--gold);
+        font-family:var(--mono);font-size:10px;letter-spacing:3px;margin:6px 2px 2px}
+  .seam::before,.seam::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  /* staggered reveal (P0.2) */
+  .ladder.reveal .rung,.ladder.reveal .seam{opacity:0;transform:translateY(9px) scale(.97);
+        animation:rungin .42s cubic-bezier(.34,1.56,.64,1) forwards;animation-delay:calc(var(--i,0)*55ms)}
+  @keyframes rungin{to{opacity:1;transform:none}}
+
+  /* balance meter (P1.4) */
+  .balance{margin:2px 0 12px}
+  .balance .blabel{font-family:var(--mono);font-size:11px;letter-spacing:2px;font-weight:700}
+  .balance .bbar{display:flex;gap:3px;margin:7px 0 5px}
+  .balance .bseg{flex:1;height:7px;border-radius:2px;transition:.3s}
+  .balance .bcounts{font-family:var(--mono);font-size:12px;color:var(--dim);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+
+  /* reel lock flash (P1.6) — overrides the earlier .land rule */
+  @keyframes lockFlash{0%{box-shadow:0 0 0 0 rgba(244,197,66,0)}30%{box-shadow:0 0 0 7px rgba(244,197,66,.22)}100%{box-shadow:0 0 0 0 rgba(244,197,66,0)}}
+  .spin .draw.land{animation:pop .36s cubic-bezier(.2,1.4,.4,1), lockFlash .55s ease}
+  @media(prefers-reduced-motion:reduce){
+    .ladder.reveal .rung,.ladder.reveal .seam{animation:none;opacity:1;transform:none}
+    .spin .draw.land{animation:none} .pip.just{animation:none}
+  }
 </style>
 </head>
 <body>
@@ -181,9 +230,12 @@
   <section id="draft" class="scr">
     <div class="bar">
       <span class="pill" id="modePill"></span>
-      <span class="pill">Round <b id="roundN">1</b>/11</span>
-      <span class="pill">Rerolls <b id="rerollN">3</b></span>
       <span class="pill" id="strengthPill">Strength <b>—</b></span>
+    </div>
+    <div class="rail">
+      <span class="pips" id="pips"></span>
+      <span class="railcount">Pick <b id="roundN">1</b>/11</span>
+      <span class="rerollpips" id="rerollPips" title="rerolls left"></span>
     </div>
 
     <div class="stage spin" id="spinStage">
@@ -200,7 +252,7 @@
         <strong style="font-size:14px">YOUR XI</strong>
         <button class="btn ghost" style="padding:6px 12px;font-size:13px" onclick="resetGame()">restart</button>
       </div>
-      <div class="xi" id="xi"></div>
+      <ol class="ladder" id="xi"></ol>
     </div>
   </section>
 
@@ -220,7 +272,8 @@
     <div class="stage">
       <div class="bar" style="margin:0 0 8px"><strong style="font-size:14px">FINAL XI</strong>
         <span class="pill">Team strength <b id="rStrength">—</b></span></div>
-      <div class="xi" id="rXi"></div>
+      <div class="balance" id="balanceBox"></div>
+      <ol class="ladder" id="rXi"></ol>
     </div>
   </section>
 
@@ -460,6 +513,151 @@ const DB = [
  {n:"Andy Flower",      c:"Zimbabwe",    e:["1990s","2000s"], r:["KEEP","MID"],  test:84, odi:84},
  {n:"Heath Streak",     c:"Zimbabwe",    e:["1990s","2000s"], r:["AR","PACE"],   test:76, odi:80},
  {n:"Grant Flower",     c:"Zimbabwe",    e:["1990s","2000s"], r:["OPEN","SPIN"], test:74, odi:78},
+
+ /* ===== AUSTRALIA (+22) ===== */
+ {n:"Victor Trumper",              c:"Australia",     e:["1900s","1910s"], r:["OPEN","TOP"], test:88, odi:null},
+ {n:"Clarrie Grimmett",            c:"Australia",     e:["1920s","1930s"], r:["SPIN"], test:87, odi:null},
+ {n:"Bill O'Reilly",               c:"Australia",     e:["1930s","1940s"], r:["SPIN"], test:89, odi:null},
+ {n:"Keith Miller",                c:"Australia",     e:["1940s","1950s"], r:["AR","PACE"], test:88, odi:null},
+ {n:"Ray Lindwall",                c:"Australia",     e:["1940s","1950s"], r:["PACE"], test:87, odi:null},
+ {n:"Neil Harvey",                 c:"Australia",     e:["1950s","1960s"], r:["TOP","MID"], test:87, odi:null},
+ {n:"Arthur Morris",               c:"Australia",     e:["1940s","1950s"], r:["OPEN"], test:84, odi:null},
+ {n:"Bill Ponsford",               c:"Australia",     e:["1920s","1930s"], r:["OPEN","TOP"], test:85, odi:null},
+ {n:"Stan McCabe",                 c:"Australia",     e:["1930s"], r:["MID"], test:83, odi:null},
+ {n:"Richie Benaud",               c:"Australia",     e:["1950s","1960s"], r:["AR","SPIN"], test:85, odi:null},
+ {n:"Alan Davidson",               c:"Australia",     e:["1950s","1960s"], r:["AR","PACE"], test:85, odi:null},
+ {n:"Bill Lawry",                  c:"Australia",     e:["1960s","1970s"], r:["OPEN"], test:82, odi:null},
+ {n:"Greg Matthews",               c:"Australia",     e:["1980s","1990s"], r:["AR","SPIN"], test:74, odi:72},
+ {n:"Merv Hughes",                 c:"Australia",     e:["1980s","1990s"], r:["PACE"], test:80, odi:76},
+ {n:"Andrew Symonds",              c:"Australia",     e:["2000s"], r:["AR","FIN","MID"], test:78, odi:86},
+ {n:"Shane Watson",                c:"Australia",     e:["2000s","2010s"], r:["AR","OPEN","PACE"], test:80, odi:85},
+ {n:"Nathan Bracken",              c:"Australia",     e:["2000s"], r:["PACE"], test:72, odi:83},
+ {n:"Mitchell Marsh",              c:"Australia",     e:["2010s","2020s"], r:["AR","MID","PACE"], test:76, odi:83},
+ {n:"Cameron Green",               c:"Australia",     e:["2020s"], r:["AR","PACE","MID"], test:80, odi:80},
+ {n:"Adam Zampa",                  c:"Australia",     e:["2010s","2020s"], r:["SPIN"], test:null, odi:85},
+ {n:"Josh Inglis",                 c:"Australia",     e:["2020s"], r:["KEEP","MID","FIN"], test:74, odi:80},
+ {n:"Usman Khawaja",               c:"Australia",     e:["2010s","2020s"], r:["OPEN","TOP"], test:83, odi:78},
+
+ /* ===== ENGLAND (+22) ===== */
+ {n:"Jack Hobbs",                  c:"England",       e:["1910s","1920s"], r:["OPEN"], test:95, odi:null},
+ {n:"Wally Hammond",               c:"England",       e:["1920s","1930s"], r:["TOP","MID"], test:93, odi:null},
+ {n:"Len Hutton",                  c:"England",       e:["1940s","1950s"], r:["OPEN"], test:92, odi:null},
+ {n:"Denis Compton",               c:"England",       e:["1940s","1950s"], r:["MID"], test:88, odi:null},
+ {n:"Harold Larwood",              c:"England",       e:["1920s","1930s"], r:["PACE"], test:87, odi:null},
+ {n:"Fred Trueman",                c:"England",       e:["1950s","1960s"], r:["PACE"], test:90, odi:null},
+ {n:"Brian Statham",               c:"England",       e:["1950s","1960s"], r:["PACE"], test:85, odi:null},
+ {n:"Ken Barrington",              c:"England",       e:["1950s","1960s"], r:["MID"], test:88, odi:null},
+ {n:"Wilfred Rhodes",              c:"England",       e:["1900s","1920s"], r:["AR","SPIN"], test:86, odi:null},
+ {n:"Sydney Barnes",               c:"England",       e:["1900s","1910s"], r:["PACE"], test:90, odi:null},
+ {n:"Colin Cowdrey",               c:"England",       e:["1950s","1960s"], r:["TOP","MID"], test:84, odi:null},
+ {n:"Peter May",                   c:"England",       e:["1950s","1960s"], r:["MID"], test:85, odi:null},
+ {n:"Alec Stewart",                c:"England",       e:["1990s","2000s"], r:["OPEN","KEEP"], test:82, odi:78},
+ {n:"Graham Thorpe",               c:"England",       e:["1990s","2000s"], r:["MID"], test:82, odi:76},
+ {n:"Mike Atherton",               c:"England",       e:["1990s"], r:["OPEN"], test:81, odi:68},
+ {n:"Ian Bell",                    c:"England",       e:["2000s","2010s"], r:["TOP","MID"], test:83, odi:78},
+ {n:"Ollie Pope",                  c:"England",       e:["2020s"], r:["TOP"], test:76, odi:null},
+ {n:"Ben Duckett",                 c:"England",       e:["2020s"], r:["OPEN"], test:78, odi:74},
+ {n:"Zak Crawley",                 c:"England",       e:["2020s"], r:["OPEN"], test:74, odi:null},
+ {n:"Mark Wood",                   c:"England",       e:["2010s","2020s"], r:["PACE"], test:79, odi:80},
+ {n:"Chris Woakes",                c:"England",       e:["2010s","2020s"], r:["AR","PACE"], test:80, odi:82},
+ {n:"Liam Livingstone",            c:"England",       e:["2020s"], r:["FIN","AR","SPIN"], test:null, odi:78},
+
+ /* ===== INDIA (+17) ===== */
+ {n:"Vinoo Mankad",                c:"India",         e:["1940s","1950s"], r:["OPEN","SPIN","AR"], test:84, odi:null},
+ {n:"Vijay Hazare",                c:"India",         e:["1940s","1950s"], r:["TOP","MID"], test:83, odi:null},
+ {n:"Vijay Merchant",              c:"India",         e:["1930s","1940s"], r:["OPEN"], test:82, odi:null},
+ {n:"Polly Umrigar",               c:"India",         e:["1950s","1960s"], r:["MID","AR"], test:80, odi:null},
+ {n:"Erapalli Prasanna",           c:"India",         e:["1960s","1970s"], r:["SPIN"], test:83, odi:null},
+ {n:"Srinivas Venkataraghavan",    c:"India",         e:["1970s","1980s"], r:["SPIN"], test:77, odi:62},
+ {n:"Dilip Sardesai",              c:"India",         e:["1960s","1970s"], r:["TOP","MID"], test:76, odi:null},
+ {n:"Farokh Engineer",             c:"India",         e:["1960s","1970s"], r:["OPEN","KEEP"], test:76, odi:63},
+ {n:"Mohammed Azharuddin",         c:"India",         e:["1980s","1990s"], r:["MID"], test:82, odi:83},
+ {n:"Ravi Shastri",                c:"India",         e:["1980s","1990s"], r:["AR","SPIN","OPEN"], test:76, odi:74},
+ {n:"Madan Lal",                   c:"India",         e:["1970s","1980s"], r:["AR","PACE"], test:69, odi:70},
+ {n:"Mohammed Siraj",              c:"India",         e:["2020s"], r:["PACE"], test:79, odi:76},
+ {n:"Yashasvi Jaiswal",            c:"India",         e:["2020s"], r:["OPEN"], test:85, odi:74},
+ {n:"Shreyas Iyer",                c:"India",         e:["2020s"], r:["MID","FIN"], test:73, odi:81},
+ {n:"Suresh Raina",                c:"India",         e:["2000s","2010s"], r:["MID","FIN","AR"], test:67, odi:80},
+ {n:"Mohammed Kaif",               c:"India",         e:["2000s"], r:["MID","FIN"], test:65, odi:74},
+ {n:"Ishant Sharma",               c:"India",         e:["2000s","2010s"], r:["PACE"], test:76, odi:69},
+
+ /* ===== PAKISTAN (+12) ===== */
+ {n:"Hanif Mohammad",              c:"Pakistan",      e:["1950s","1960s"], r:["OPEN"], test:88, odi:null},
+ {n:"Fazal Mahmood",               c:"Pakistan",      e:["1950s","1960s"], r:["PACE"], test:85, odi:null},
+ {n:"Majid Khan",                  c:"Pakistan",      e:["1970s","1980s"], r:["OPEN","TOP"], test:81, odi:74},
+ {n:"Mushtaq Mohammad",            c:"Pakistan",      e:["1960s","1970s"], r:["TOP","AR"], test:80, odi:68},
+ {n:"Asif Iqbal",                  c:"Pakistan",      e:["1960s","1970s"], r:["MID","AR"], test:80, odi:72},
+ {n:"Sarfraz Nawaz",               c:"Pakistan",      e:["1970s","1980s"], r:["PACE"], test:80, odi:74},
+ {n:"Shoaib Malik",                c:"Pakistan",      e:["2000s","2010s"], r:["MID","AR","SPIN"], test:70, odi:80},
+ {n:"Umar Gul",                    c:"Pakistan",      e:["2000s","2010s"], r:["PACE"], test:74, odi:78},
+ {n:"Fakhar Zaman",                c:"Pakistan",      e:["2010s","2020s"], r:["OPEN"], test:62, odi:81},
+ {n:"Naseem Shah",                 c:"Pakistan",      e:["2020s"], r:["PACE"], test:76, odi:76},
+ {n:"Haris Rauf",                  c:"Pakistan",      e:["2020s"], r:["PACE"], test:64, odi:78},
+ {n:"Mohammad Nawaz",              c:"Pakistan",      e:["2020s"], r:["AR","SPIN"], test:62, odi:74},
+
+ /* ===== SRI LANKA (+8) ===== */
+ {n:"Arjuna Ranatunga",            c:"Sri Lanka",     e:["1980s","1990s"], r:["MID"], test:80, odi:85},
+ {n:"Asanka Gurusinha",            c:"Sri Lanka",     e:["1980s","1990s"], r:["TOP","MID"], test:74, odi:78},
+ {n:"Roy Dias",                    c:"Sri Lanka",     e:["1980s"], r:["TOP","MID"], test:74, odi:70},
+ {n:"Duleep Mendis",               c:"Sri Lanka",     e:["1980s"], r:["MID"], test:73, odi:70},
+ {n:"Lasith Embuldeniya",          c:"Sri Lanka",     e:["2020s"], r:["SPIN"], test:68, odi:null},
+ {n:"Wanindu Hasaranga",           c:"Sri Lanka",     e:["2020s"], r:["SPIN","AR"], test:68, odi:80},
+ {n:"Kusal Mendis",                c:"Sri Lanka",     e:["2010s","2020s"], r:["MID","KEEP"], test:74, odi:76},
+ {n:"Pathum Nissanka",             c:"Sri Lanka",     e:["2020s"], r:["OPEN"], test:74, odi:78},
+
+ /* ===== WEST INDIES (+11) ===== */
+ {n:"George Headley",              c:"West Indies",   e:["1930s"], r:["TOP","MID"], test:90, odi:null},
+ {n:"Frank Worrell",               c:"West Indies",   e:["1950s"], r:["MID","AR"], test:87, odi:null},
+ {n:"Everton Weekes",              c:"West Indies",   e:["1950s"], r:["TOP","MID"], test:89, odi:null},
+ {n:"Clyde Walcott",               c:"West Indies",   e:["1950s"], r:["MID","KEEP"], test:87, odi:null},
+ {n:"Learie Constantine",          c:"West Indies",   e:["1930s"], r:["AR","PACE"], test:78, odi:null},
+ {n:"Wes Hall",                    c:"West Indies",   e:["1960s"], r:["PACE"], test:83, odi:null},
+ {n:"Lance Gibbs",                 c:"West Indies",   e:["1960s","1970s"], r:["SPIN"], test:85, odi:null},
+ {n:"Shai Hope",                   c:"West Indies",   e:["2010s","2020s"], r:["KEEP","FIN","MID"], test:72, odi:82},
+ {n:"Nicholas Pooran",             c:"West Indies",   e:["2020s"], r:["FIN","KEEP"], test:null, odi:80},
+ {n:"Shamar Joseph",               c:"West Indies",   e:["2020s"], r:["PACE"], test:76, odi:null},
+ {n:"Roston Chase",                c:"West Indies",   e:["2010s","2020s"], r:["AR","SPIN"], test:74, odi:68},
+
+ /* ===== SOUTH AFRICA (+9) ===== */
+ {n:"Graeme Pollock",              c:"South Africa",  e:["1960s","1970s"], r:["TOP","MID"], test:92, odi:null},
+ {n:"Barry Richards",              c:"South Africa",  e:["1970s"], r:["OPEN"], test:90, odi:null},
+ {n:"Mike Procter",                c:"South Africa",  e:["1960s","1970s"], r:["AR","PACE"], test:85, odi:null},
+ {n:"Hugh Tayfield",               c:"South Africa",  e:["1950s"], r:["SPIN"], test:83, odi:null},
+ {n:"Eddie Barlow",                c:"South Africa",  e:["1960s","1970s"], r:["AR","OPEN"], test:80, odi:null},
+ {n:"Aiden Markram",               c:"South Africa",  e:["2010s","2020s"], r:["TOP","OPEN"], test:80, odi:78},
+ {n:"Keshav Maharaj",              c:"South Africa",  e:["2010s","2020s"], r:["SPIN"], test:80, odi:74},
+ {n:"Anrich Nortje",               c:"South Africa",  e:["2020s"], r:["PACE"], test:78, odi:78},
+ {n:"Marco Jansen",                c:"South Africa",  e:["2020s"], r:["AR","PACE"], test:79, odi:76},
+
+ /* ===== NEW ZEALAND (+9) ===== */
+ {n:"Glenn Turner",                c:"New Zealand",   e:["1970s","1980s"], r:["OPEN"], test:85, odi:80},
+ {n:"Bert Sutcliffe",              c:"New Zealand",   e:["1950s","1960s"], r:["OPEN","TOP"], test:84, odi:null},
+ {n:"John Reid",                   c:"New Zealand",   e:["1950s","1960s"], r:["MID","AR","PACE"], test:83, odi:null},
+ {n:"Martin Donnelly",             c:"New Zealand",   e:["1940s","1950s"], r:["TOP","MID"], test:80, odi:null},
+ {n:"Jack Cowie",                  c:"New Zealand",   e:["1930s","1940s"], r:["PACE"], test:76, odi:null},
+ {n:"Tom Latham",                  c:"New Zealand",   e:["2010s","2020s"], r:["OPEN","KEEP"], test:81, odi:78},
+ {n:"Mitchell Santner",            c:"New Zealand",   e:["2010s","2020s"], r:["SPIN","AR"], test:74, odi:80},
+ {n:"Daryl Mitchell",              c:"New Zealand",   e:["2020s"], r:["MID","AR"], test:82, odi:80},
+ {n:"Lockie Ferguson",             c:"New Zealand",   e:["2010s","2020s"], r:["PACE"], test:70, odi:80},
+
+ /* ===== ZIMBABWE (+4) ===== */
+ {n:"Brendan Taylor",              c:"Zimbabwe",      e:["2000s","2010s"], r:["TOP","KEEP"], test:81, odi:83},
+ {n:"Murray Goodwin",              c:"Zimbabwe",      e:["1990s","2000s"], r:["TOP","MID"], test:79, odi:77},
+ {n:"Tatenda Taibu",               c:"Zimbabwe",      e:["2000s","2010s"], r:["KEEP","MID"], test:74, odi:74},
+ {n:"Sikandar Raza",               c:"Zimbabwe",      e:["2010s","2020s"], r:["AR","MID","SPIN"], test:76, odi:83},
+
+ /* ===== BANGLADESH (+3) ===== */
+ {n:"Mohammad Ashraful",           c:"Bangladesh",    e:["2000s","2010s"], r:["MID","TOP"], test:70, odi:72},
+ {n:"Litton Das",                  c:"Bangladesh",    e:["2010s","2020s"], r:["KEEP","TOP"], test:76, odi:78},
+ {n:"Najmul Hossain Shanto",       c:"Bangladesh",    e:["2020s"], r:["TOP","MID"], test:75, odi:75},
+
+ /* ===== AFGHANISTAN (+1) ===== */
+ {n:"Mohammad Shahzad",            c:"Afghanistan",   e:["2010s","2020s"], r:["OPEN","KEEP"], test:70, odi:78},
+
+ /* ===== IRELAND (+3) ===== */
+ {n:"Paul Stirling",               c:"Ireland",       e:["2010s","2020s"], r:["OPEN","AR","SPIN"], test:74, odi:83},
+ {n:"Kevin O'Brien",               c:"Ireland",       e:["2010s","2020s"], r:["FIN","MID","AR","PACE"], test:70, odi:78},
+ {n:"William Porterfield",         c:"Ireland",       e:["2010s","2020s"], r:["OPEN"], test:68, odi:75},
 ];
 
 /* ---- XI shapes per mode (ordered slots) ---- */
@@ -468,6 +666,10 @@ const SHAPES = {
   wc:  ["OPEN","OPEN","TOP","MID","MID","FIN","AR","KEEP","PACE","PACE","SPIN"],
 };
 const POS_LABEL = {OPEN:"Opener",TOP:"No.3",MID:"Middle",FIN:"Finisher",KEEP:"Keeper",AR:"All-round",PACE:"Pace",SPIN:"Spin"};
+/* nation cues — colour stripe (always renders) + abbreviation + flag emoji (bonus glyph) */
+const STRIPE = {Australia:"#ffcd00",England:"#5b8def",India:"#ff9933",Pakistan:"#2bb673","South Africa":"#36c46a","Sri Lanka":"#ffb81c","New Zealand":"#c7ced8",Bangladesh:"#00a651",Afghanistan:"#e3534f",Zimbabwe:"#f06a3f",Ireland:"#2ec27e","West Indies":"#c75b6e"};
+const NAT_ABBR = {Australia:"AUS",England:"ENG",India:"IND",Pakistan:"PAK","South Africa":"RSA","Sri Lanka":"SL","New Zealand":"NZ",Bangladesh:"BAN",Afghanistan:"AFG",Zimbabwe:"ZIM",Ireland:"IRE","West Indies":"WI"};
+const FLAG = {Australia:"🇦🇺",England:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",India:"🇮🇳",Pakistan:"🇵🇰","South Africa":"🇿🇦","Sri Lanka":"🇱🇰","New Zealand":"🇳🇿",Bangladesh:"🇧🇩",Afghanistan:"🇦🇫",Zimbabwe:"🇿🇼",Ireland:"🇮🇪","West Indies":"🏝️"};
 const SPIN_NATIONS=[...new Set(DB.map(p=>p.c))];
 const SPIN_ERAS=[...new Set(DB.flatMap(p=>p.e))].sort();
 let SPINNING=false;
@@ -580,15 +782,14 @@ function spin(){
 
 function nextRound(){
   if(G.round>=11){ simulate(); return; }
-  $("roundN").textContent = G.round+1;
-  $("rerollN").textContent = G.rerolls;
+  renderRail();
   updateCrumb();
   G.offer = spin();
   renderXI("xi", false);
   renderStrength();
   spinTo(G.offer);
 }
-function reroll(){ if(SPINNING || G.rerolls<=0) return; G.rerolls--; $("rerollN").textContent=G.rerolls; G.offer=spin(); spinTo(G.offer); }
+function reroll(){ if(SPINNING || G.rerolls<=0) return; G.rerolls--; renderRail(); G.offer=spin(); spinTo(G.offer); }
 
 /* slot-reel spin: flicker random nation/era, decelerate, land, then reveal cards */
 function spinTo(o){
@@ -641,17 +842,64 @@ function pick(i){
 }
 
 function fitClass(f){ return f>=0.95?"good":f>=0.7?"ok":"bad"; }
+function seamIndex(){ return G.shape.findIndex(r=>r==="PACE"||r==="SPIN"); }
+
+/* batting-order ladder — replaces the old text slot list (P0.1).
+   Same view used live during the draft and (with reveal stagger) on the result. */
 function renderXI(target, reveal){
   const hide = (G.diff==="expert") && !reveal;
-  $(target).innerHTML = G.shape.map((role,i)=>{
+  const seam = seamIndex();
+  let h="";
+  G.shape.forEach((role,i)=>{
+    if(i===seam) h += `<li class="seam" style="--i:${i}">ATTACK</li>`;
     const slot=G.picks[i];
-    if(!slot) return `<div class="slot empty"><span class="pos">${POS_LABEL[role]}</span><span class="who" style="color:var(--dim)">— empty —</span></div>`;
-    const p=slot.p;
-    const fitTxt = hide ? "" : `<span class="fit ${fitClass(slot.f)}">${Math.round(slot.f*100)}%</span>`;
-    const rtTxt  = hide ? "" : ` · ${rating(p)}`;
-    return `<div class="slot"><span class="pos">${POS_LABEL[role]}</span>
-       <span class="who">${p.n}<small>${p.c} · ${p.e.join("/")}${rtTxt}</small></span>${fitTxt}</div>`;
-  }).join("");
+    if(!slot){ h += `<li class="rung empty" style="--i:${i}"><span class="ord">${i+1}</span>
+      <span class="rname">— ${POS_LABEL[role]} —</span></li>`; return; }
+    const p=slot.p, isBowl=(role==="PACE"||role==="SPIN");
+    const badges=(role==="KEEP"?"🧤":"")+(role==="AR"?"🔁":"");
+    const dot=isBowl?`<span class="tdot ${role==="SPIN"?"spin":"pace"}"></span>`:"";
+    const flag=FLAG[p.c]?FLAG[p.c]+" ":"";
+    const rtTxt=hide?"":`<span class="rrt">${rating(p)}</span>`;
+    const fitTxt=hide?"":`<span class="fit ${fitClass(slot.f)}">${Math.round(slot.f*100)}%</span>`;
+    h += `<li class="rung" style="--i:${i};--stripe:${STRIPE[p.c]||"#26402f"}">
+      <span class="ord">${i+1}</span>
+      <span class="rname">${flag}${p.n}${badges?` <span class="badges">${badges}</span>`:""}${dot}
+        <small>${NAT_ABBR[p.c]||p.c} · ${p.e.join("/")}</small></span>
+      ${rtTxt}${fitTxt}</li>`;
+  });
+  const ol=$(target);
+  ol.className="ladder"+(reveal?" reveal":"");
+  ol.innerHTML=h;
+  if(reveal) void ol.offsetWidth;     // restart the stagger animation
+}
+
+/* progress rail (P1.5): 11 fill-pips, pick counter, reroll pips */
+function renderRail(){
+  const filled=G.picks.filter(Boolean).length;
+  $("roundN").textContent=Math.min(G.round+1,11);
+  $("pips").innerHTML=Array.from({length:11},(_,i)=>`<span class="pip${i<filled?" filled":""}${i===filled-1?" just":""}"></span>`).join("");
+  $("rerollPips").innerHTML="↻ "+"●".repeat(G.rerolls)+"○".repeat(3-G.rerolls);
+}
+
+/* balance / squad-quality meter (P1.4) — honest: bar tracks team strength (which varies
+   with the draft), counts show the XI shape. Not wired into the sim (the sim already
+   rewards fit via strength = mean(rating×fit); a second multiplier would double-count). */
+function computeBalance(){
+  const c={keep:0,ar:0,pace:0,spin:0,bat:0};
+  G.picks.forEach((slot,i)=>{ if(!slot) return; const r=G.shape[i];
+    if(r==="KEEP")c.keep++; else if(r==="AR")c.ar++; else if(r==="PACE")c.pace++; else if(r==="SPIN")c.spin++; else c.bat++; });
+  const s=teamStrength(), filled=G.picks.filter(Boolean).length;
+  const score01=clamp((s-62)/30,0,1);
+  const label = filled<11?"INCOMPLETE" : s>=90?"ELITE" : s>=84?"STRONG" : s>=76?"SOLID" : "THIN";
+  return {score01,label,c,strength:s};
+}
+function renderBalance(target){
+  const b=computeBalance(), lit=Math.round(b.score01*8);
+  const segs=Array.from({length:8},(_,i)=>`<span class="bseg" style="background:${i<lit?"var(--green)":"var(--line)"}"></span>`).join("");
+  const col=(b.label==="ELITE"||b.label==="STRONG")?"var(--green)":b.label==="SOLID"?"var(--gold)":"var(--dim)";
+  const counts=`bat ${b.c.bat+b.c.keep} · 🧤${b.c.keep} · 🔁${b.c.ar} · <span class="tdot pace"></span>${b.c.pace} <span class="tdot spin"></span>${b.c.spin}`;
+  $(target).innerHTML=`<span class="blabel" style="color:${col}">SQUAD · ${b.label}</span>
+    <div class="bbar">${segs}</div><div class="bcounts">${counts}</div>`;
 }
 function teamStrength(){
   let s=0,n=0;
@@ -676,10 +924,16 @@ function setResult(verdict,vclass,record,sub,grid,team,tiles){
   $("rGrid").textContent=grid;
   $("rStrength").textContent=team.toFixed(1);
   renderXI("rXi", true);                 // reveal everything in Expert
+  renderBalance("balanceBox");
   const mode = G.mode==="wtc" ? "World Test Championship" : "World Cup";
   G._share = `THE PERFECT XI — ${mode}\n${record}  ${verdict}\n${grid}\nBuild yours: (the-perfect-xi)`;
   G._card = { mode:G.mode, verdict, vclass, record, team, tiles:tiles||[],
-              xi: G.shape.map((r,i)=>({pos:POS_LABEL[r], name:G.picks[i].p.n, nat:G.picks[i].p.c})) };
+              seam: seamIndex(), balance: computeBalance(),
+              xi: G.shape.map((r,i)=>{ const p=G.picks[i].p; return {
+                ord:i+1, role:r, name:p.n, nat:p.c, abbr:(NAT_ABBR[p.c]||p.c),
+                era:p.e.join("/"), stripe:(STRIPE[p.c]||"#26402f"),
+                bowl:(r==="PACE"?"pace":r==="SPIN"?"spin":null),
+                keep:r==="KEEP", ar:r==="AR" }; }) };
   show("result");
 }
 
@@ -791,31 +1045,52 @@ function drawTiles(x, tiles, cx, top, maxW){
   return y;
 }
 
+/* share card = cricket team-sheet/scorecard (P0.3) — same view-model as the live ladder.
+   Pure canvas primitives, no images: nation colour stripe, ATTACK seam, balance bar, result tiles. */
 function drawShareCard(c){
-  const W=1000, H=1500, cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const W=1000, M=W-180;
+  const per=Math.max(1, Math.floor((M+9)/(40+9)));
+  const tileRows=Math.ceil((c.tiles&&c.tiles.length||1)/per), tilesH=tileRows*49;
+  const rungH=46, rungN=c.xi.length + 1;             // +1 for the ATTACK seam row
+  const yMode=168, yVerdict=246, yRecord=394, yRating=446;
+  const tilesTop=502, balTop=tilesTop+tilesH+30, xiLabelY=balTop+90, rowsTop=xiLabelY+32;
+  const H=rowsTop+rungN*rungH+96;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
   const x=cv.getContext("2d");
   const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#16271d"); g.addColorStop(1,"#0c1410");
   x.fillStyle=g; x.fillRect(0,0,W,H);
   x.strokeStyle="#26402f"; x.lineWidth=4; roundRect(x,24,24,W-48,H-48,28); x.stroke();
   x.textAlign="center";
-  x.fillStyle="#e8f3ec"; x.font="800 46px ui-monospace,Menlo,monospace"; x.fillText("THE PERFECT XI", W/2, 122);
-  x.fillStyle="#8fae9d"; x.font="600 27px -apple-system,Segoe UI,sans-serif";
-  x.fillText(c.mode==="wtc"?"World Test Championship":"World Cup", W/2, 170);
-  const vcol = c.vclass==="v-perfect"?"#f4c542" : c.vclass==="v-champ"?"#19c37d" : "#9fb9aa";
-  x.fillStyle=vcol; x.font="800 36px ui-monospace,Menlo,monospace"; x.fillText(c.verdict, W/2, 256);
-  x.fillStyle="#e8f3ec"; x.font="800 150px ui-monospace,Menlo,monospace"; x.fillText(c.record, W/2, 442);
-  x.fillStyle="#8fae9d"; x.font="500 24px -apple-system,sans-serif"; x.fillText("team rating "+c.team.toFixed(1), W/2, 490);
-  const ty = drawTiles(x, c.tiles, W/2, 544, W-180);
-  const top = Math.max(ty+44, 706);
-  x.fillStyle="#8fae9d"; x.textAlign="center"; x.font="700 24px ui-monospace,monospace"; x.fillText("— YOUR XI —", W/2, top);
-  let yy=top+52;
-  for(const m of c.xi){
-    x.textAlign="left";  x.fillStyle="#8fae9d"; x.font="600 20px ui-monospace,monospace"; x.fillText(m.pos.toUpperCase(), 110, yy);
-    x.fillStyle="#e8f3ec"; x.font="600 29px -apple-system,Segoe UI,sans-serif"; x.fillText(m.name, 250, yy);
-    x.textAlign="right"; x.fillStyle="#8fae9d"; x.font="500 22px -apple-system,sans-serif"; x.fillText(m.nat, W-110, yy);
-    yy+=48;
+  x.fillStyle="#e8f3ec"; x.font="800 46px ui-monospace,Menlo,monospace"; x.fillText("THE PERFECT XI", W/2, 116);
+  x.fillStyle="#8fae9d"; x.font="600 26px -apple-system,Segoe UI,sans-serif";
+  x.fillText(c.mode==="wtc"?"World Test Championship":"World Cup", W/2, yMode);
+  const vcol=c.vclass==="v-perfect"?"#f4c542":c.vclass==="v-champ"?"#19c37d":"#9fb9aa";
+  x.fillStyle=vcol; x.font="800 34px ui-monospace,Menlo,monospace"; x.fillText(c.verdict, W/2, yVerdict);
+  x.fillStyle="#e8f3ec"; x.font="800 140px ui-monospace,Menlo,monospace"; x.fillText(c.record, W/2, yRecord);
+  x.fillStyle="#8fae9d"; x.font="500 24px -apple-system,sans-serif"; x.fillText("team rating "+c.team.toFixed(1), W/2, yRating);
+  drawTiles(x, c.tiles, W/2, tilesTop, M);
+  if(c.balance){
+    const b=c.balance, bx=110, bw=W-220, lit=Math.round(b.score01*8), segw=(bw-7*8)/8;
+    x.textAlign="left"; x.fillStyle=(b.label==="ELITE"||b.label==="STRONG")?"#19c37d":b.label==="SOLID"?"#f4c542":"#8fae9d";
+    x.font="700 18px ui-monospace,monospace"; x.fillText("SQUAD · "+b.label, bx, balTop);
+    for(let i=0;i<8;i++){ x.fillStyle=i<lit?"#19c37d":"#26402f"; roundRect(x,bx+i*(segw+8),balTop+14,segw,10,3); x.fill(); }
   }
-  x.textAlign="center"; x.fillStyle="#19c37d"; x.font="600 25px -apple-system,sans-serif"; x.fillText("can your all-time XI go unbeaten?", W/2, H-66);
+  x.textAlign="center"; x.fillStyle="#8fae9d"; x.font="700 22px ui-monospace,monospace"; x.fillText("— STARTING XI —", W/2, xiLabelY);
+  let yy=rowsTop;
+  c.xi.forEach((m,i)=>{
+    if(i===c.seam){
+      x.strokeStyle="#3a5a44"; x.lineWidth=1; x.beginPath(); x.moveTo(120,yy-9); x.lineTo(W-120,yy-9); x.stroke();
+      x.textAlign="center"; x.fillStyle="#f4c542"; x.font="700 15px ui-monospace,monospace"; x.fillText("ATTACK", W/2, yy+10);
+      yy+=rungH;
+    }
+    x.fillStyle=m.stripe; roundRect(x,110,yy-22,9,28,3); x.fill();
+    x.textAlign="left"; x.fillStyle="#6f8a7b"; x.font="600 20px ui-monospace,monospace"; x.fillText(String(m.ord), 138, yy);
+    const label=m.name+(m.keep?"  🧤":"")+(m.ar?"  🔁":"");
+    x.fillStyle="#e8f3ec"; x.font="600 28px -apple-system,Segoe UI,sans-serif"; x.fillText(label, 176, yy);
+    x.textAlign="right"; x.fillStyle="#8fae9d"; x.font="500 20px -apple-system,sans-serif"; x.fillText(m.abbr, W-120, yy);
+    yy+=rungH;
+  });
+  x.textAlign="center"; x.fillStyle="#19c37d"; x.font="600 24px -apple-system,sans-serif"; x.fillText("can your all-time XI go unbeaten?", W/2, H-56);
   return cv;
 }
 
