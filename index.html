@@ -202,6 +202,9 @@
   .rx-v{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--green)}
 
   /* ---- tournament / share UX (Phase 2) ---- */
+  .seg{display:flex;gap:6px}
+  .segbtn{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:10px;padding:10px;font-weight:600;font-size:14px;cursor:pointer}
+  .segbtn.on{background:var(--green);color:#04140c;border-color:var(--green)}
   .share-card{background:var(--panel2);border:1px solid var(--green);border-radius:14px;padding:16px;margin:14px 0 0}
   .share-head{font-weight:700;color:var(--green);margin-bottom:10px;text-align:center}
   .share-code{font-family:var(--mono);background:var(--bg);border:1px dashed var(--green);border-radius:10px;padding:12px;color:var(--ink);word-break:break-all;text-align:center;cursor:pointer;margin-bottom:12px;font-size:15px;letter-spacing:1px}
@@ -236,6 +239,19 @@
   .award-row .ttl{font-family:var(--mono);font-size:10px;color:var(--gold);text-transform:uppercase}
   .award-row .who{font-weight:700} .award-row .who i{font-style:normal;font-size:11px;color:var(--dim)}
   .award-row .aval{margin-left:auto;font-family:var(--mono);color:var(--green);font-weight:700;flex:none}
+
+  /* ---- FAQ + disclaimer ---- */
+  .faq{margin-top:14px;text-align:left}
+  .faq-h{font-size:14px;font-weight:700;margin:0 0 10px;color:var(--ink)}
+  .faq-item{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel);overflow:hidden}
+  .faq-item>summary{padding:12px 14px;cursor:pointer;list-style:none;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .faq-item>summary::-webkit-details-marker{display:none}
+  .faq-item>summary::after{content:"+";color:var(--dim);font-family:var(--mono);flex:none}
+  .faq-item[open]>summary::after{content:"–"}
+  .faq-item p{margin:0;padding:0 14px 14px;color:var(--dim);font-size:13px;line-height:1.55}
+  .faq-item p b{color:var(--ink)}
+  .disclaimer{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--dim);font-size:12px;line-height:1.55}
+  .disclaimer strong{color:var(--ink)} .disclaimer a{color:var(--green)}
 </style>
 </head>
 <body>
@@ -273,9 +289,29 @@
       <button class="btn" style="width:100%" onclick="openTournament()">🏆 Play a tournament with friends</button>
       <p style="color:var(--dim);font-size:13px;margin:10px 0 0">Draft your XI, share your code, then play a World Cup or WTC bracket against your friends' teams — all in the browser, no sign-up.</p>
     </div>
+
+    <div class="stage faq">
+      <h3 class="faq-h">Frequently asked questions</h3>
+      <details class="faq-item"><summary>What is The Perfect XI?</summary>
+        <p>A free cricket draft game: build an all-time XI one player at a time, then simulate a full campaign to see if it could go unbeaten. A cricket take on the viral football game 38-0 and the NBA game 82-0.</p></details>
+      <details class="faq-item"><summary>How do I play?</summary>
+        <p>Pick a mode, then Classic (ratings shown) or Expert (ratings hidden). Each round a wheel spins a random Nation × Era — draft one player from that group and they slot into the best open position. Three rerolls per game. Fill all 11, then the simulator plays out your campaign match by match and shows your record, the scorelines, and the awards.</p></details>
+      <details class="faq-item"><summary>What are the two modes?</summary>
+        <p><b>World Cup (ODI)</b> — a one-day XI: top a 10-team group, win the semi-final and final, all 11 matches, for the 11–0. <b>World Test Championship</b> — a Test XI through a 6-series home-and-away cycle, finish top two, win the one-off final, go unbeaten for the mace.</p></details>
+      <details class="faq-item"><summary>How does multiplayer work?</summary>
+        <p>After drafting, tap “Share your XI” to copy a short code and send it to a friend. They open the game, hit “Play a tournament”, paste your code (and others'), and run a World Cup or WTC tournament between the real teams. Empty seats are filled with AI sides. No accounts, no server — the code is the whole transport, and the same codes always produce the same tournament.</p></details>
+      <details class="faq-item"><summary>How is a result and margin decided?</summary>
+        <p>A transparent ratings model decides each match, then a realistic scoreline is generated to match it: a win batting first is by runs, a successful chase is by wickets, a Test can be won by an innings or end in a draw — exactly as in real cricket.</p></details>
+      <details class="faq-item"><summary>Are the ratings official? Does my data leave the page?</summary>
+        <p>No on both counts. Player ratings are deliberately subjective, for-fun estimates — not official rankings. Everything runs in your browser; nothing is uploaded or stored on a server. Share codes are only shared by you.</p></details>
+      <div class="disclaimer">
+        <strong>Disclaimer.</strong> This is an unofficial, fan-made game for entertainment. It is not affiliated with, endorsed by, or associated with the ICC, any national cricket board, league, or player. Player names are used solely for identification and commentary; all ratings are subjective estimates, not official statistics. No data leaves your device. Inspired by <a href="https://www.82-0.com" target="_blank" rel="noopener">82-0</a> and <a href="https://38-0.app" target="_blank" rel="noopener">38-0</a>.
+      </div>
+    </div>
+
     <div class="foot">
       Inspired by <a href="https://www.82-0.com" target="_blank" rel="noopener">82-0</a> (NBA) &amp;
-      <a href="https://38-0-0.com" target="_blank" rel="noopener">38-0-0</a> (Premier League).
+      <a href="https://38-0.app" target="_blank" rel="noopener">38-0</a> (football).
       Runs entirely in your browser — no data leaves this page.
     </div>
   </section>
@@ -283,6 +319,30 @@
   <!-- SETUP -->
   <section id="setup" class="scr">
     <div class="brand"><h1 id="setupTitle" style="font-size:34px"></h1></div>
+
+    <!-- MAKE-UP PICKER -->
+    <div class="stage">
+      <div class="mk-head">
+        <strong style="font-size:14px">YOUR XI MAKE-UP</strong>
+        <span class="pill" id="mkFmtPill"></span>
+      </div>
+      <p class="mk-sub" id="mkSub">Pick how your eleven lines up before you draft. The keeper is always 1.</p>
+
+      <!-- preset chips (38-0-style formation buttons) -->
+      <div class="mk-chips" id="mkChips"></div>
+
+      <!-- custom steppers -->
+      <details class="mk-custom" id="mkCustomWrap">
+        <summary>⚙︎ Custom make-up</summary>
+        <div class="mk-steppers" id="mkSteppers"></div>
+        <p class="mk-note" id="mkRule"></p>
+      </details>
+
+      <!-- live validity + batting-order preview -->
+      <div class="mk-status" id="mkStatus"></div>
+      <div class="mk-preview" id="mkPreview"></div>
+    </div>
+
     <div class="stage">
       <p style="margin:0 0 14px;color:var(--dim)">Choose difficulty:</p>
       <div class="modes" style="margin-top:0">
@@ -373,12 +433,17 @@
   <!-- TOURNAMENT -->
   <section id="tournament" class="scr">
     <div class="brand"><h1 style="font-size:32px">Tournament</h1>
-      <p>Add up to 7 friends' XI codes. Empty seats are filled with AI teams.</p></div>
+      <p>Pick a format and add up to 8 teams (88 players). No XI yet? Generate one. Empty seats are filled with AI teams.</p></div>
     <div class="stage">
-      <div class="row" style="gap:8px">
+      <div class="seg" id="tMode">
+        <button class="segbtn on" data-m="wc" onclick="setTourneyMode('wc')">World Cup</button>
+        <button class="segbtn" data-m="wtc" onclick="setTourneyMode('wtc')">WTC</button>
+      </div>
+      <div class="row" style="gap:8px;margin-top:12px">
         <input id="codeBox" class="codefield" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a friend's XI code or link…">
         <button class="btn" onclick="addCodeFromBox()">Add</button>
       </div>
+      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="addRandomXI()">🎲 Generate an XI for me</button>
       <div id="codeError" class="code-error"></div>
       <ul id="teamList" class="team-list"></ul>
       <button class="btn" id="btnRunTourney" style="width:100%" disabled onclick="runTourneyFromTeams()">Add at least 2 teams</button>
@@ -1303,10 +1368,10 @@ function accrueBox(picks, batInns, bowlInns){           // like accrue(), but fo
   bowlInns.forEach(inn=>inn.forEach(b=>{ if(b.wkts>0){ ent(picks[b.i].p.n).wkts+=b.wkts; seen.add(picks[b.i].p.n); } }));
   seen.forEach(n=>ent(n).mat++);
 }
-function mpAccrue(team, inningsTotals, wktsTaken){       // attribute one fixture's box to a real team
+function mpAccrue(team, inningsTotals, wktsTaken, mode){  // attribute one fixture's box to a real team
   if(!team.picks) return;                                // AI teams have no players
-  const sp=G.picks, ss=G.shape, sm=G.mode;
-  G.picks=team.picks; G.shape=SHAPES[team.mode]; G.mode=team.mode;   // batWeights/rating read these
+  const sp=G.picks, ss=G.shape, sm=G.mode, M=mode||team.mode;
+  G.picks=team.picks; G.shape=SHAPES[M]; G.mode=M;       // batWeights/rating read these (tournament format)
   try{
     const batInns=inningsTotals.map(t=>allocRuns(Math.max(1,Math.round(t))));
     const bowl=[allocWickets(clamp(Math.round(wktsTaken),0,20))];
@@ -1352,8 +1417,8 @@ function tFixture(a,b,mode,isFinal){
   if(mode==="wtc" && !isFinal && Math.random()<Math.max(0.05,0.32-Math.abs(a.strength-b.strength)*0.02)){ res="D"; }
   else { const aWins=Math.random()<winProb(a.strength,b.strength); res=aWins?"W":"L"; winner=aWins?a:b; loser=aWins?b:a; }
   const rec = mode==="wc" ? tOdi(a,b,res) : tTest(a,b,res);
-  mpAccrue(a, rec.aInns, rec.bWkLost);                   // a took b's wickets
-  mpAccrue(b, rec.bInns, rec.aWkLost);
+  mpAccrue(a, rec.aInns, rec.bWkLost, mode);             // a took b's wickets
+  mpAccrue(b, rec.bInns, rec.aWkLost, mode);
   let marginText;
   if(res==="D") marginText="match drawn";
   else if(rec.by==="innings") marginText=`${winner.name} won by an innings & ${rec.margin} runs`;
@@ -1625,16 +1690,39 @@ function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("on"); s
 function resetGame(){ G=null; route("home"); }
 
 /* ---- tournament UX: build a field from pasted codes, run it, render ---- */
-let T={teams:[]};
+let T={teams:[], mode:"wc"};                              // max 8 teams (88 players)
 function teamNameFor(picks){ const tal={}; picks.forEach(pk=>tal[pk.p.c]=(tal[pk.p.c]||0)+1);
   const top=Object.entries(tal).sort((a,b)=>b[1]-a[1])[0][0]; return (NAT_ABBR[top]||top)+" Select"; }
+function setTourneyMode(m){ T.mode=m;
+  T.teams.forEach(t=>{ if(t.picks) t.strength=Math.round(strengthOf(t.picks,m)); });   // re-rate in the chosen format
+  renderModeSeg(); renderTeams(); }
+function renderModeSeg(){ const el=$("tMode"); if(!el) return;
+  el.querySelectorAll(".segbtn").forEach(b=> b.classList.toggle("on", b.getAttribute("data-m")===T.mode)); }
+function makeRandomPicks(mode){
+  const shape=SHAPES[mode], fmt=mode==="wtc"?"test":"odi", used=new Set(), picks=[];
+  for(const role of shape){
+    const cands=DB.filter(p=>p[fmt]!=null && p[fmt]>0 && !used.has(p.n) && fit(p,role)>=0.6);
+    const p=cands[Math.floor(Math.random()*cands.length)] || DB.find(p=>p[fmt]!=null && !used.has(p.n));
+    used.add(p.n); picks.push({p, f:fit(p,role)});
+  }
+  picks._mode=mode; return picks;
+}
+function addRandomXI(){
+  const err=$("codeError"); err.textContent="";
+  if(T.teams.length>=8){ err.textContent="Tournament is full (8 teams)."; return; }
+  const picks=makeRandomPicks(T.mode), players=picks.map(pk=>pk.p), code=encodeXI(T.mode, players);
+  if(T.teams.some(t=>t.code===code)){ err.textContent="That random XI is already in — try again."; return; }
+  T.teams.push({id:"r"+T.teams.length, code, mode:T.mode, picks, players,
+    name:teamNameFor(picks)+" 🎲", flag:(FLAG[picks[0].p.c]||"🎲"), strength:Math.round(strengthOf(picks,T.mode)), isAI:false});
+  renderTeams();
+}
 function openTournament(){
   if(!T.teams.some(t=>t.you) && G && G.picks && G.picks.every(Boolean)){     // seed YOUR drafted XI
-    const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode;
+    const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; T.mode=G.mode;
     T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p)), mode:G.mode, picks,
       players:G.picks.map(p=>p.p), name:"Your XI", flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
   }
-  renderTeams(); show("tournament");
+  renderModeSeg(); renderTeams(); show("tournament");
 }
 function addCodeFromBox(){ addCode($("codeBox").value); }
 function addCode(raw){
@@ -1646,7 +1734,7 @@ function addCode(raw){
   const d=decodeXI(code);
   if(!d.ok){ err.textContent=d.error; return; }
   T.teams.push({id:"p"+T.teams.length, code, mode:d.mode, picks:d.picks, players:d.players,
-    name:teamNameFor(d.picks), flag:(FLAG[d.picks[0].p.c]||"🏏"), strength:Math.round(strengthOf(d.picks)), isAI:false});
+    name:teamNameFor(d.picks), flag:(FLAG[d.picks[0].p.c]||"🏏"), strength:Math.round(strengthOf(d.picks, T.mode)), isAI:false});
   if($("codeBox")) $("codeBox").value="";
   if(d.warn) err.textContent="⚠ "+d.warn;
   renderTeams();
@@ -1664,7 +1752,7 @@ function renderTeams(){
 }
 function runTourneyFromTeams(){
   if(T.teams.filter(t=>!t.isAI).length<2) return;
-  runTournament(T.teams[0].mode, T.teams, T.teams.map(t=>t.code).join("."));
+  runTournament(T.mode, T.teams, T.mode+"|"+T.teams.map(t=>t.code).join("."));
   renderTournamentResult(); show("tourneyResult");
 }
 function copyShare(){ if(G&&G.shareCode) navigator.clipboard?.writeText(G.shareCode).then(()=>toast("code copied"),()=>toast("copy failed")); }

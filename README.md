@@ -1,8 +1,8 @@
 # The Perfect XI
 
 Draft an all-time cricket XI and find out if it could go a whole campaign **unbeaten**.
-A cricket take on the viral [82-0](https://www.82-0.com) (NBA) and [38-0-0](https://38-0-0.com)
-(Premier League) draft-and-simulate games.
+A cricket take on the viral [82-0](https://www.82-0.com) (NBA) and [38-0](https://38-0.app)
+(football) draft-and-simulate games.
 
 Two modes:
 
