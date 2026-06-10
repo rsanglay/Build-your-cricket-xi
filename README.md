@@ -59,16 +59,21 @@ nonsense side. The defaults reproduce the game's original fixed shapes exactly.
 ## Multiplayer — shareable codes, no backend
 
 Each player names their team and drafts their own XI; a short **code** (about 20
-characters) *is* the whole transport — there is no server.
+characters) carries the whole team — there is no game server.
 
 - **Host a lobby:** open the Tournament screen, **name your team** (e.g. *Raazik's
   Royals*), draft your XI, then **Copy invite link** and send it on WhatsApp/anywhere.
   The lobby shows a *waiting for friends* state until at least two real teams are in.
-- **Friends open the link** → they land in the lobby with your team(s) already in, name
-  their own team, **draft their XI to join**, then send *their* updated link back. Pasting
-  a whole lobby link merges in only the new teams — no duplicates.
-- **GO:** when everyone's in, the host hits **GO** and the campaign **unfolds match by
-  match** on a live feed (with a skip button) before the champion is revealed.
+- **Live lobby:** the link carries a room id — friends' browsers connect **directly to
+  yours** (WebRTC via PeerJS; the free broker only does the introduction and never sees
+  your teams). As each friend names their team and finishes drafting, **they appear in
+  your lobby by themselves**, and every joiner sees the lobby update too.
+- **Only the host says GO.** Joiners see "the host hits GO"; when the host starts it,
+  the same campaign **unfolds match by match on every connected screen at once**, on a
+  live feed with a skip button, before the champion is revealed.
+- **No connection? Still works.** If WebRTC or the broker is unreachable (or you're on
+  `file://`), friends just send *their* link back — pasting a whole lobby link merges in
+  only the new teams, no duplicates — and you hit GO as before.
 - **Head-to-head spotlight:** any fixture between two real people gets a gold **⚔
   HEAD-TO-HEAD** card and extra suspense in the feed, plus a **Rivals** tab at the end
   with your win–loss ledger against each friend.

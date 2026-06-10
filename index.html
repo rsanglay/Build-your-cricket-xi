@@ -369,11 +369,11 @@
       <details class="faq-item"><summary>What are the two modes?</summary>
         <p><b>World Cup (ODI)</b> — a one-day XI: top a 10-team group, win the semi-final and final, all 11 matches, for the 11–0. <b>World Test Championship</b> — a Test XI through a 6-series home-and-away cycle, finish top two, win the one-off final, go unbeaten for the mace.</p></details>
       <details class="faq-item"><summary>How does multiplayer work?</summary>
-        <p>Open “Play a tournament”, <b>name your team</b>, draft your XI, and send the invite link. Friends open it, name their team, draft, and send their link back — pasting it merges their teams into your lobby. When everyone's in, the host hits <b>GO</b> and the matches play out one by one, with head-to-head games between friends given the spotlight and a Rivals tab at the end. Empty seats are filled with AI sides. No accounts, no server — the link is the whole transport, and the same teams always produce the same tournament.</p></details>
+        <p>Open “Play a tournament”, <b>name your team</b>, draft your XI, and send the invite link. Friends open it, name their team and draft — the <b>live lobby</b> connects your browsers directly, so they appear on your screen as they join, and when everyone's in <b>only the host hits GO</b>: the matches then play out one by one on every screen at once, with head-to-head games between friends given the spotlight and a Rivals tab at the end. Empty seats are filled with AI sides. No accounts and no game server — if the live connection can't be made, friends just send their link back and you paste it in. The same teams always produce the same tournament.</p></details>
       <details class="faq-item"><summary>How is a result and margin decided?</summary>
         <p>A transparent ratings model decides each match, then a realistic scoreline is generated to match it: a win batting first is by runs, a successful chase is by wickets, a Test can be won by an innings or end in a draw — exactly as in real cricket.</p></details>
       <details class="faq-item"><summary>Are the ratings official? Does my data leave the page?</summary>
-        <p>No on both counts. Player ratings are deliberately subjective, for-fun estimates — not official rankings. Everything runs in your browser; nothing is uploaded or stored on a server. Share codes are only shared by you.</p></details>
+        <p>No on both counts. Player ratings are deliberately subjective, for-fun estimates — not official rankings. Everything runs in your browser; nothing is uploaded or stored on a game server. Share codes are only shared by you. The optional live lobby connects browsers directly (WebRTC) — a free broker only performs the introduction and never sees your teams.</p></details>
       <div class="disclaimer">
         <strong>Disclaimer.</strong> This is an unofficial, fan-made game for entertainment. It is not affiliated with, endorsed by, or associated with the ICC, any national cricket board, league, or player. Player names are used solely for identification and commentary; all ratings are subjective estimates, not official statistics. No data leaves your device. Inspired by <a href="https://www.82-0.com" target="_blank" rel="noopener">82-0</a> and <a href="https://38-0.app" target="_blank" rel="noopener">38-0</a>.
       </div>
@@ -519,11 +519,12 @@
       </div>
       <div id="codeError" class="code-error"></div>
       <ul id="teamList" class="team-list"></ul>
+      <div id="liveStatus" class="share-hint" style="display:none;margin:0 0 10px"></div>
       <div class="invite-box" id="inviteBox" style="display:none">
         <div class="share-head">📨 Invite friends</div>
         <div class="share-code" id="inviteLink" onclick="copyInvite()" title="Tap to copy">—</div>
         <div class="row" style="justify-content:center"><button class="btn ghost" onclick="copyInvite()">📋 Copy invite link</button></div>
-        <p class="share-hint">Send this link. Friends open it, name their team and draft their XI — when their link comes back, paste it above and every team loads in. Then hit GO.</p>
+        <p class="share-hint">Send this link. Friends open it, name their team and draft — with the live lobby connected they appear here by themselves and you hit GO. If live sync is down, they send their link back and you paste it above.</p>
       </div>
       <button class="btn" id="btnRunTourney" style="width:100%;margin-top:12px" disabled onclick="runTourneyFromTeams()">Add at least 2 teams</button>
       <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="show('home')">← back</button></div>
@@ -561,6 +562,10 @@
 </div>
 <div class="toast" id="toast">copied to clipboard</div>
 
+<!-- Live lobby (optional): PeerJS brokers a direct browser-to-browser WebRTC connection so
+     joiners appear in the host's lobby in real time. If this fails to load (offline /
+     file://), multiplayer falls back to the manual link-passing flow — nothing breaks. -->
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 /* ============================================================
    THE PERFECT XI  — client-side draft + unbeaten-season sim
@@ -1953,7 +1958,7 @@ function teamNameFor(picks){ const tal={}; picks.forEach(pk=>tal[pk.p.c]=(tal[pk
 function cleanTeamName(s){ return (s||"").replace(/[.~<>]/g," ").replace(/\s+/g," ").trim().slice(0,18); }
 function myTeamName(){ return T.myName || "Your XI"; }
 function renameMyTeam(v){ T.myName=cleanTeamName(v);
-  const t=T.teams.find(x=>x.you); if(t){ t.name=myTeamName(); renderTeams(); } }
+  const t=T.teams.find(x=>x.you); if(t){ t.name=myTeamName(); renderTeams(); liveSendMyTeam(); } }
 function syncNameBox(){ const el=$("teamNameBox"); if(!el) return;
   const yt=T.teams.find(t=>t.you); el.value = yt ? (yt.name==="Your XI"?"":yt.name) : (T.myName||""); }
 function setTourneyMode(m){ T.mode=m;
@@ -1972,7 +1977,11 @@ function joinTournamentWithMyXI(){       // called when a tournament-draft fills
   T.teams=T.teams.filter(t=>!t.you);     // replace any previous "your XI"
   T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
     players:G.picks.map(p=>p.p), name:myTeamName(), flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
-  renderModeSeg(); renderTeams(); syncNameBox(); show("tournament");
+  renderModeSeg(); renderTeams(); syncNameBox();
+  if(LIVE.hostConn) liveSendMyTeam();                 // invitee: my XI lands in the host's lobby live
+  else if(!T.invited) liveHostStart();                // host: open the live room with my XI in it
+  if(LIVE.pendingGo){ const d=LIVE.pendingGo; LIVE.pendingGo=null; liveRunGo(d); return; }
+  show("tournament");
 }
 function renderInviteBanner(){
   const b=$("inviteBanner"); if(!b) return;
@@ -1991,7 +2000,9 @@ function openTournament(){
     T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
       players:G.picks.map(p=>p.p), name:myTeamName(), flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
   }
-  renderModeSeg(); renderTeams(); syncNameBox(); show("tournament");
+  renderModeSeg(); renderTeams(); syncNameBox();
+  if(T.teams.some(t=>t.you) && !LIVE.hostConn) liveHostStart();   // hosting with an XI → open live room
+  show("tournament");
 }
 function addCodeFromBox(){ addCode($("codeBox").value); }
 /* one shared team token: "Name~code" (name optional, URL-decoded if it came from a link) */
@@ -2012,6 +2023,8 @@ function addCode(raw, givenName, quiet){
     let parts=g[1].split(".").filter(Boolean);
     if(parts[0]==="wc"||parts[0]==="wtc") parts.shift();
     let added=0; parts.forEach(p=>{ if(addCode(p,null,true)) added++; });
+    const pm=s.match(/[#&]p=([A-Za-z0-9_-]+)/);          // link carries a live room → hop in
+    if(pm && !LIVE.isHost && !LIVE.hostConn) liveJoin(pm[1]);
     if(!quiet && !added) err.textContent="No new teams in that link — they're all here already.";
     if($("codeBox")) $("codeBox").value="";
     renderTeams(); return added>0;
@@ -2038,13 +2051,19 @@ function renderTeams(){
     ${t.you?'':`<button class="trm" onclick="removeTeam(${i})" aria-label="remove">×</button>`}</li>`).join("")
     : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — name your team and draft above, or paste a friend's code.</li>`;
   const btn=$("btnRunTourney"), youIn=T.teams.some(t=>t.you);
-  btn.disabled = real<2;
-  btn.classList.toggle("waiting", youIn && real<2);   // host lobby: waiting for friends to join
-  btn.textContent = real>=2
+  const remote=!!(LIVE.hostConn && LIVE.hostConn.open);    // connected invitee: the host starts, not you
+  btn.disabled = remote || real<2;
+  btn.classList.toggle("waiting", remote || (youIn && real<2));
+  btn.textContent = remote
+    ? "⏳ Lobby is live — only the host hits GO"
+    : real>=2
     ? `▶ GO — start the ${T.mode==="wtc"?"WTC":"World Cup"} (${real} real${T.teams.length<8?` + ${8-T.teams.length} AI`:""})`
-    : youIn ? "⏳ Waiting for friends to join — send the invite link above"
+    : youIn ? (LIVE.isHost && LIVE.conns.length
+                ? `⏳ ${LIVE.conns.length} friend${LIVE.conns.length>1?"s":""} connected — waiting for their XI…`
+                : "⏳ Waiting for friends to join — send the invite link above")
             : "Add at least 2 teams to start";
   refreshInvite(); renderInviteBanner();
+  if(LIVE.isHost && LIVE.conns.length) liveBroadcast({t:"lobby",...lobbySnapshot()});   // mirror to joiners
 }
 function copyTeamCode(i){ const t=T.teams[i]; if(!(t&&t.code)) return;
   const txt=(t.name?t.name+"~":"")+t.code;            // the name rides along with the code
@@ -2054,13 +2073,114 @@ function refreshInvite(){
   const real=T.teams.filter(t=>!t.isAI);
   if(!real.length){ box.style.display="none"; T.inviteUrl=null; return; }
   const part=t=> (t.name?encodeURIComponent(t.name)+"~":"")+t.code;   // names travel in the link
-  T.inviteUrl = location.origin+location.pathname+"#g="+T.mode+"."+real.map(part).join(".");
+  const pid=LIVE.isHost ? LIVE.peerId : T.hostPeer;                   // live-lobby room id rides along
+  T.inviteUrl = location.origin+location.pathname+"#g="+T.mode+"."+real.map(part).join(".")+(pid?"&p="+pid:"");
   $("inviteLink").textContent=T.inviteUrl; box.style.display="block";
 }
 function copyInvite(){ if(T.inviteUrl) navigator.clipboard?.writeText(T.inviteUrl).then(()=>toast("invite link copied"),()=>toast("copy failed")); }
-function runTourneyFromTeams(){              // GO — run the campaign, then let it unfold in time
+function runTourneyFromTeams(){              // GO — host-only in a live lobby; broadcast, then unfold
   if(T.teams.filter(t=>!t.isAI).length<2) return;
-  runTournament(T.mode, T.teams, T.mode+"|"+T.teams.map(t=>t.code).join("."));
+  if(LIVE.hostConn && LIVE.hostConn.open) return;          // invitees never start a live lobby
+  const seed=T.mode+"|"+T.teams.map(t=>t.code).join(".");
+  if(LIVE.isHost && LIVE.conns.length) liveBroadcast({t:"go", seed, ...lobbySnapshot()});
+  runTournament(T.mode, T.teams, seed);
+  renderTournamentResult(); show("tourneyResult");
+  startTourneyReveal();
+}
+
+/* ===== live lobby (optional, WebRTC via PeerJS) =====
+   The invite link carries the HOST's peer id (&p=…). Joiners connect straight to the
+   host's browser: their XI lands in the host's lobby the moment they finish drafting,
+   the host's lobby is mirrored to every joiner, and ONLY the host can hit GO — the start
+   is broadcast with the seed, so every screen plays the SAME deterministic tournament at
+   the same time. Team codes travel peer-to-peer; the PeerJS broker only introduces the
+   browsers. No PeerJS / no network → the manual link-passing flow above still works. */
+const LIVE={peer:null, peerId:null, isHost:false, conns:[], hostConn:null, pendingGo:null};
+function liveSupported(){ return typeof Peer!=="undefined"; }
+function liveStatus(msg, good){ const el=$("liveStatus"); if(!el) return;
+  el.style.display=msg?"block":"none"; el.innerHTML=msg||"";
+  el.style.color=good?"var(--green)":"var(--dim)"; }
+function liveParse(raw){ try{ if(typeof raw!=="string" || raw.length>20000) return null;
+  const d=JSON.parse(raw); return (d && typeof d.t==="string") ? d : null; }catch(e){ return null; } }
+function liveSend(c,obj){ try{ c.send(JSON.stringify(obj)); }catch(e){} }
+function liveBroadcast(obj){ LIVE.conns.forEach(c=>liveSend(c,obj)); }
+function lobbySnapshot(){ return {mode:T.mode, teams:T.teams.filter(t=>!t.isAI).map(t=>({name:t.name, code:t.code}))}; }
+function liveNewPeer(cb){
+  const p=new Peer("pxi-"+Math.random().toString(36).slice(2,11));
+  p.on("error", e=>{ if(e && ["network","server-error","socket-error","unavailable-id","browser-incompatible","peer-unavailable"].includes(e.type))
+    liveStatus("🔌 Live sync unavailable — exchange links manually instead (that still works)."); });
+  p.on("open", ()=>cb(p));
+  return p;
+}
+function liveHostStart(){                    // host: open the room once YOUR XI is in the lobby
+  if(!liveSupported()){ liveStatus("🔌 Live sync offline — send the link and ask friends to send theirs back."); return; }
+  if(LIVE.peer || LIVE.hostConn) return;
+  LIVE.isHost=true;
+  liveStatus("⏳ Opening live lobby…");
+  liveNewPeer(p=>{
+    LIVE.peer=p; LIVE.peerId=p.id;
+    p.on("connection", c=>{
+      c.on("open", ()=>{ LIVE.conns.push(c); liveSend(c,{t:"lobby",...lobbySnapshot()}); renderTeams(); });
+      c.on("data", d=>liveHostOnData(c,d));
+      c.on("close", ()=>{ LIVE.conns=LIVE.conns.filter(x=>x!==c); renderTeams(); });
+    });
+    refreshInvite(); renderTeams();
+    liveStatus("🟢 Live lobby open — friends who open your link appear here automatically. You hit GO.", true);
+  });
+}
+function liveHostOnData(c,raw){
+  const d=liveParse(raw); if(!d) return;
+  if(d.t==="join"){
+    const code=(""+(d.code||"")).slice(0,64), name=cleanTeamName(""+(d.name||""));
+    const ex=T.teams.find(t=>t.code===code);
+    if(ex){ if(name && !ex.you) ex.name=name; }
+    else addCode(code, name||null, true);
+    renderTeams();                            // renderTeams mirrors the lobby to every joiner
+  }
+}
+function liveJoin(hostId){                   // invitee: connect to the host's lobby
+  if(!liveSupported() || LIVE.isHost || LIVE.hostConn || !hostId || hostId===LIVE.peerId) return;
+  T.hostPeer=hostId;
+  liveStatus("⏳ Connecting to the host's lobby…");
+  liveNewPeer(p=>{
+    LIVE.peer=p; LIVE.peerId=p.id;
+    const c=p.connect(hostId,{reliable:true});
+    c.on("open", ()=>{ LIVE.hostConn=c;
+      liveStatus("🟢 Connected — name your team and draft; your XI lands in the host's lobby by itself. The host hits GO.", true);
+      liveSendMyTeam(); renderTeams(); });
+    c.on("data", d=>liveGuestOnData(d));
+    c.on("close", ()=>{ LIVE.hostConn=null;
+      liveStatus("🔌 Lost the host — send your invite link back manually instead."); renderTeams(); });
+  });
+}
+function liveSendMyTeam(){ const me=T.teams.find(t=>t.you);
+  if(me && LIVE.hostConn && LIVE.hostConn.open) liveSend(LIVE.hostConn,{t:"join", name:me.name, code:me.code}); }
+function liveGuestOnData(raw){
+  const d=liveParse(raw); if(!d) return;
+  if(d.t==="lobby"){ liveMergeLobby(d,false); renderTeams(); }
+  else if(d.t==="go"){
+    if(currentScreen()==="draft" && G && G.round<11){ LIVE.pendingGo=d; toast("the host hit GO — finish your draft"); return; }
+    liveRunGo(d);
+  }
+}
+function liveMergeLobby(d, strict){          // strict (GO): the host's field is final — no local extras
+  if(d.mode==="wc"||d.mode==="wtc") T.mode=d.mode;
+  const mine=T.teams.find(t=>t.you);
+  const teams=(Array.isArray(d.teams)?d.teams:[]).slice(0,8).map((x,i)=>{
+    const code=(""+((x&&x.code)||"")).slice(0,64), name=cleanTeamName(""+((x&&x.name)||""));
+    if(mine && code===mine.code){ if(name) mine.name=name; return mine; }
+    const dec=decodeXI(code); if(!dec.ok) return null;
+    return {id:"p"+i, code, mode:dec.mode, picks:dec.picks, players:dec.players, shape:dec.shape,
+      name:name||teamNameFor(dec.picks), flag:(FLAG[dec.picks[0].p.c]||"🏏"),
+      strength:Math.round(strengthOf(dec.picks,T.mode)), isAI:false};
+  }).filter(Boolean);
+  if(!strict && mine && !teams.includes(mine)) teams.unshift(mine);   // keep my XI while the host catches up
+  T.teams=teams; renderModeSeg();
+}
+function liveRunGo(d){
+  liveMergeLobby(d, true);                   // exactly the host's field + the host's seed
+  if(T.teams.length<2) return;
+  runTournament(d.mode==="wtc"?"wtc":"wc", T.teams, ""+(d.seed||""));
   renderTournamentResult(); show("tourneyResult");
   startTourneyReveal();
 }
@@ -2163,14 +2283,19 @@ function renderTournamentResult(){
   tourneyTab("standings");
 }
 function importFromHash(){     // a friend opening an invite link lands here -> tournament lobby, then they draft to join
-  const h=(location.hash||"").slice(1);
-  const t=h.match(/^t=([A-Za-z0-9_-]+)/), g=h.match(/^g=(.+)$/);
+  const h=(location.hash||"").slice(1), segs=h.split("&");
+  const t=h.match(/^t=([A-Za-z0-9_-]+)/);
+  const g=segs.find(x=>x.startsWith("g="));
+  const pm=(segs.find(x=>/^p=[A-Za-z0-9_-]+$/.test(x))||"").slice(2);   // live-lobby room id
   if(t){ const d=decodeXI(t[1]); T={teams:[], mode:(d.ok?d.mode:"wc"), invited:true, myName:""};
     addCode(t[1]); renderModeSeg(); renderTeams(); syncNameBox(); show("tournament"); return true; }
-  if(g){ const parts=g[1].split(".").filter(Boolean); let mode="wc";
+  if(g){ const parts=g.slice(2).split(".").filter(Boolean); let mode="wc";
     if(parts[0]==="wc"||parts[0]==="wtc") mode=parts.shift();      // group links carry the host's format
-    T={teams:[], mode, invited:true, myName:""}; parts.forEach(c=>addCode(c,null,true));
-    renderModeSeg(); renderTeams(); syncNameBox(); show("tournament"); return true; }
+    T={teams:[], mode, invited:true, myName:"", hostPeer:(pm||null)};
+    parts.forEach(c=>addCode(c,null,true));
+    renderModeSeg(); renderTeams(); syncNameBox(); show("tournament");
+    if(pm) liveJoin(pm);                                           // connect to the host's live lobby
+    return true; }
   return false;
 }
 
