@@ -58,23 +58,32 @@ nonsense side. The defaults reproduce the game's original fixed shapes exactly.
 
 ## Multiplayer — shareable codes, no backend
 
-Each player drafts their own XI; a short **code** (about 20 characters) *is* the whole
-transport — there is no server.
+Each player names their team and drafts their own XI; a short **code** (about 20
+characters) *is* the whole transport — there is no server.
 
-- **Invite a friend:** from the Tournament screen, **Copy invite link** (or copy any team's
-  code). Send it on WhatsApp/anywhere.
-- **They open the link** → they land in the tournament lobby with your team(s) already in,
-  **draft their own XI to join**, then run the tournament or pass the link on.
+- **Host a lobby:** open the Tournament screen, **name your team** (e.g. *Raazik's
+  Royals*), draft your XI, then **Copy invite link** and send it on WhatsApp/anywhere.
+  The lobby shows a *waiting for friends* state until at least two real teams are in.
+- **Friends open the link** → they land in the lobby with your team(s) already in, name
+  their own team, **draft their XI to join**, then send *their* updated link back. Pasting
+  a whole lobby link merges in only the new teams — no duplicates.
+- **GO:** when everyone's in, the host hits **GO** and the campaign **unfolds match by
+  match** on a live feed (with a skip button) before the champion is revealed.
+- **Head-to-head spotlight:** any fixture between two real people gets a gold **⚔
+  HEAD-TO-HEAD** card and extra suspense in the feed, plus a **Rivals** tab at the end
+  with your win–loss ledger against each friend.
 - **The tournament:** up to **8 teams (88 players)**; empty seats are filled with AI sides.
   The host picks **World Cup** (group + knockout) or **WTC** (points table + final). It plays
   through the same match engine, and the results screen shows **standings, the knockout
   bracket, and tournament-wide awards** (a friend's player can win the Golden Bat).
 - It's **deterministic**: the same set of codes always produces the same tournament, so
-  everyone who runs them sees the same champion.
+  everyone who runs them sees the same champion. (Team names ride along in the link as
+  `Name~code` but never affect the result.)
 
 The code packs the mode, your make-up, and your 11 players into URL-safe text with a
 checksum; a bad paste fails gracefully with a plain-English message. (A default make-up
-emits the shorter v1 code; a custom make-up uses v2 — both round-trip exactly.)
+emits the shorter v1 code; a custom make-up uses v2 — both round-trip exactly. Old
+plain codes without a name still work and get an auto-generated name.)
 
 ## How the simulation works
 

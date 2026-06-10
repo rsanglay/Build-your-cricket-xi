@@ -272,6 +272,24 @@
   .invite-banner{padding:12px 14px;border:1px solid var(--green);border-radius:10px;background:linear-gradient(135deg,#16412b,#0f2a1c);color:var(--ink);font-size:13px;line-height:1.5;margin-bottom:12px}
   .invite-banner b{color:var(--green)}
   .champ-banner{text-align:center;font-size:22px;font-weight:800;color:var(--gold);background:linear-gradient(180deg,#16271d,var(--bg));border:1px solid var(--gold);border-radius:14px;padding:18px;margin-bottom:14px}
+  .champ-banner.in{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+  /* lobby: named teams, wait-for-friends, GO */
+  .btn.waiting{background:transparent;color:var(--gold);border:1px dashed var(--gold);animation:lobbyPulse 1.6s ease infinite;cursor:default}
+  @keyframes lobbyPulse{0%,100%{opacity:.6}50%{opacity:1}}
+  /* tournament match feed — the games unfold in time */
+  #txList{margin:0;padding:0;list-style:none;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+  .tx-row{display:flex;flex-direction:column;gap:4px;padding:10px 14px;border-top:1px solid var(--line);border-left:3px solid transparent}
+  .tx-row:first-child{border-top:none}
+  .tx-tag{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+  .tx-face{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+  .tx-team{font-weight:700} .tx-team.win{color:var(--green)} .tx-team.lose{color:var(--dim)}
+  .tx-v{color:var(--dim);font-size:11px;font-family:var(--mono)}
+  .tx-res{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .tx-h2h{border-left-color:var(--gold);background:linear-gradient(135deg,rgba(244,197,66,.08),transparent 60%)}
+  .tx-h2h .tx-tag{color:var(--gold)} .tx-h2h .tx-face{font-size:16px}
+  /* head-to-head rivalry summary (Rivals tab) */
+  .rivalry-head{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:12px;border:1px solid var(--gold);border-radius:12px;background:linear-gradient(135deg,#2a230f,#15281d);margin:14px 0 8px;font-size:15px}
+  .rivalry-head .rscore{font-family:var(--mono);font-weight:800;color:var(--gold);font-size:18px}
   .tabs{display:flex;gap:6px;margin-bottom:12px}
   .tabs .tab{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:10px;padding:9px;font-weight:600;font-size:13px}
   .tabs .tab.on{background:var(--green);color:#04140c;border-color:var(--green)}
@@ -339,7 +357,7 @@
     </div>
     <div class="stage" style="margin-top:14px;text-align:center">
       <button class="btn" style="width:100%" onclick="openTournament()">🏆 Play a tournament with friends</button>
-      <p style="color:var(--dim);font-size:13px;margin:10px 0 0">Draft your XI, share your code, then play a World Cup or WTC bracket against your friends' teams — all in the browser, no sign-up.</p>
+      <p style="color:var(--dim);font-size:13px;margin:10px 0 0">Name your team, draft your XI, invite friends with a link — when everyone's in, hit GO and watch the games unfold. All in the browser, no sign-up.</p>
     </div>
 
     <div class="stage faq">
@@ -351,7 +369,7 @@
       <details class="faq-item"><summary>What are the two modes?</summary>
         <p><b>World Cup (ODI)</b> — a one-day XI: top a 10-team group, win the semi-final and final, all 11 matches, for the 11–0. <b>World Test Championship</b> — a Test XI through a 6-series home-and-away cycle, finish top two, win the one-off final, go unbeaten for the mace.</p></details>
       <details class="faq-item"><summary>How does multiplayer work?</summary>
-        <p>After drafting, tap “Share your XI” to copy a short code and send it to a friend. They open the game, hit “Play a tournament”, paste your code (and others'), and run a World Cup or WTC tournament between the real teams. Empty seats are filled with AI sides. No accounts, no server — the code is the whole transport, and the same codes always produce the same tournament.</p></details>
+        <p>Open “Play a tournament”, <b>name your team</b>, draft your XI, and send the invite link. Friends open it, name their team, draft, and send their link back — pasting it merges their teams into your lobby. When everyone's in, the host hits <b>GO</b> and the matches play out one by one, with head-to-head games between friends given the spotlight and a Rivals tab at the end. Empty seats are filled with AI sides. No accounts, no server — the link is the whole transport, and the same teams always produce the same tournament.</p></details>
       <details class="faq-item"><summary>How is a result and margin decided?</summary>
         <p>A transparent ratings model decides each match, then a realistic scoreline is generated to match it: a win batting first is by runs, a successful chase is by wickets, a Test can be won by an innings or end in a draw — exactly as in real cricket.</p></details>
       <details class="faq-item"><summary>Are the ratings official? Does my data leave the page?</summary>
@@ -493,27 +511,28 @@
         <button class="segbtn on" data-m="wc" onclick="setTourneyMode('wc')">World Cup</button>
         <button class="segbtn" data-m="wtc" onclick="setTourneyMode('wtc')">WTC</button>
       </div>
-      <button class="btn" style="width:100%;margin-top:12px" onclick="startDraftForTournament()">🏏 Draft your XI to join</button>
+      <input id="teamNameBox" class="codefield" style="width:100%;margin-top:12px" maxlength="18" autocomplete="off" spellcheck="false" placeholder="Name your team — e.g. Raazik's Royals" oninput="renameMyTeam(this.value)">
+      <button class="btn" style="width:100%;margin-top:8px" onclick="startDraftForTournament()">🏏 Draft your XI to join</button>
       <div class="row" style="gap:8px;margin-top:8px">
         <input id="codeBox" class="codefield" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="…or paste a friend's code / link">
         <button class="btn ghost" onclick="addCodeFromBox()">Add</button>
       </div>
       <div id="codeError" class="code-error"></div>
       <ul id="teamList" class="team-list"></ul>
-      <button class="btn" id="btnRunTourney" style="width:100%" disabled onclick="runTourneyFromTeams()">Add at least 2 teams</button>
       <div class="invite-box" id="inviteBox" style="display:none">
         <div class="share-head">📨 Invite friends</div>
         <div class="share-code" id="inviteLink" onclick="copyInvite()" title="Tap to copy">—</div>
         <div class="row" style="justify-content:center"><button class="btn ghost" onclick="copyInvite()">📋 Copy invite link</button></div>
-        <p class="share-hint">Send this link. Friends open it, your teams load in, and they add their own XI — then anyone can run the tournament.</p>
+        <p class="share-hint">Send this link. Friends open it, name their team and draft their XI — when their link comes back, paste it above and every team loads in. Then hit GO.</p>
       </div>
+      <button class="btn" id="btnRunTourney" style="width:100%;margin-top:12px" disabled onclick="runTourneyFromTeams()">Add at least 2 teams</button>
       <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="show('home')">← back</button></div>
     </div>
   </section>
 
   <!-- TOURNAMENT RESULT -->
   <section id="tourneyResult" class="scr">
-    <div class="stage result">
+    <div class="stage result" id="trMain">
       <div class="champ-banner" id="champBanner"></div>
       <div class="tabs" id="resTabs">
         <button class="tab on" data-t="standings" onclick="tourneyTab('standings')">Standings</button>
@@ -523,9 +542,18 @@
       <div id="tabStandings" class="tab-pane"></div>
       <div id="tabBracket" class="tab-pane" hidden></div>
       <div id="tabAwards" class="tab-pane" hidden></div>
+      <div id="tabRivals" class="tab-pane" hidden></div>
       <div class="row" style="justify-content:center;margin-top:14px">
         <button class="btn ghost" onclick="show('tournament')">← teams</button>
         <button class="btn ghost" onclick="goHome()">home</button>
+      </div>
+    </div>
+    <div class="stage" id="txStage">
+      <div class="bar" style="margin:0 0 8px"><strong style="font-size:14px">MATCH FEED</strong>
+        <span class="pill" id="txCount"></span></div>
+      <ol id="txList"></ol>
+      <div class="row" id="txSkip" style="display:none;justify-content:center;margin-top:10px">
+        <button class="btn ghost" onclick="finishTourneyReveal()">skip to the result ›</button>
       </div>
     </div>
   </section>
@@ -1033,6 +1061,7 @@ function crumbFor(id){
 function updateCrumb(){ $("crumb").textContent = crumbFor(currentScreen()); }
 function route(id, push=true){
   clearReveal();                                              // stop any game-by-game reveal in flight
+  if(_txTimer){ clearTxReveal(); finishTourneyReveal(); }     // leaving mid-feed → land the tournament result
   if((id==="setup"||id==="draft") && !G) id="home";          // guard deep-links / stale forward
   if(id==="result" && !(G && G._share)) id="home";
   if(id==="tourneyResult" && !TOURNAMENT) id="home";
@@ -1671,24 +1700,24 @@ function runTournament(hostMode, teams, seedSrc){
       const sd=[...field].sort((x,y)=>y.strength-x.strength);
       const A=[sd[0],sd[3],sd[4],sd[7]], B=[sd[1],sd[2],sd[5],sd[6]];
       const pts=Object.fromEntries(field.map(x=>[x.id,{w:0,d:0,l:0,pts:0,team:x}]));
-      const playGroup=g=>{ for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){ const f=tFixture(g[i],g[j],"wc"); t.fixtures.push(f);
+      const playGroup=(g,label)=>{ for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){ const f=tFixture(g[i],g[j],"wc"); f.stage=label; t.fixtures.push(f);
         pts[f.winner.id].w++; pts[f.winner.id].pts+=2; pts[f.loser.id].l++; } };
-      playGroup(A); playGroup(B);
+      playGroup(A,"Group A"); playGroup(B,"Group B");
       const tbl=g=>g.map(x=>pts[x.id]).sort((p,q)=>q.pts-p.pts||q.team.strength-p.team.strength);
       const tA=tbl(A), tB=tbl(B);
-      const sfA=tFixture(tA[0].team,tB[1].team,"wc",true); t.fixtures.push(sfA);
-      const sfB=tFixture(tB[0].team,tA[1].team,"wc",true); t.fixtures.push(sfB);
-      const fin=tFixture(sfA.winner,sfB.winner,"wc",true); t.fixtures.push(fin);
+      const sfA=tFixture(tA[0].team,tB[1].team,"wc",true); sfA.stage="Semi-final"; t.fixtures.push(sfA);
+      const sfB=tFixture(tB[0].team,tA[1].team,"wc",true); sfB.stage="Semi-final"; t.fixtures.push(sfB);
+      const fin=tFixture(sfA.winner,sfB.winner,"wc",true); fin.stage="Final"; t.fixtures.push(fin);
       t.standings={A:tA,B:tB}; t.bracket=[{round:"Semi-final",fx:sfA},{round:"Semi-final",fx:sfB},{round:"Final",fx:fin}];
       t.champion=fin.winner;
     } else {
       const WIN=12,DRAW=4, pts=Object.fromEntries(field.map(x=>[x.id,{w:0,d:0,l:0,P:0,pts:0,team:x}]));
-      for(let i=0;i<field.length;i++)for(let j=i+1;j<field.length;j++){ const f=tFixture(field[i],field[j],"wtc"); t.fixtures.push(f);
+      for(let i=0;i<field.length;i++)for(let j=i+1;j<field.length;j++){ const f=tFixture(field[i],field[j],"wtc"); f.stage="League"; t.fixtures.push(f);
         const X=pts[field[i].id],Y=pts[field[j].id]; X.P++;Y.P++;
         if(f.result==="D"){X.d++;Y.d++;X.pts+=DRAW;Y.pts+=DRAW;} else {pts[f.winner.id].w++;pts[f.winner.id].pts+=WIN;pts[f.loser.id].l++;} }
       const pct=r=>r.P?r.pts/(r.P*WIN):0;
       const table=Object.values(pts).sort((p,q)=>pct(q)-pct(p)||q.team.strength-p.team.strength).map(r=>({...r,pct:+(pct(r)*100).toFixed(1)}));
-      const fin=tFixture(table[0].team,table[1].team,"wtc",true); t.fixtures.push(fin);
+      const fin=tFixture(table[0].team,table[1].team,"wtc",true); fin.stage="WTC Final"; t.fixtures.push(fin);
       t.standings=table; t.bracket=[{round:"WTC Final",fx:fin}]; t.champion=fin.winner;
     }
     t.awards=computeAwards();
@@ -1911,10 +1940,22 @@ function copyResult(){ navigator.clipboard?.writeText(G._share).then(()=>toast("
 function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),1500); }
 function resetGame(){ DRAFT_FOR_TOURNEY=false; G=null; route("home"); }
 
-/* ---- tournament UX: build a field from pasted codes, run it, render ---- */
-let T={teams:[], mode:"wc"};                              // max 8 teams (88 players)
+/* ---- tournament UX: build a field from pasted codes, run it, render ----
+   Lobby flow: HOST names their team -> drafts -> sends the invite link and WAITS.
+   Friends open the link, name their team, draft, and send THEIR link back — pasting a whole
+   lobby link merges in only the new teams. When everyone's in, the host hits GO and the
+   games unfold in time on the match feed. Team names ride along in links/codes as
+   "Name~code" — old plain codes still work (auto-named), so nothing is invalidated. */
+let T={teams:[], mode:"wc", myName:""};                   // max 8 teams (88 players)
 function teamNameFor(picks){ const tal={}; picks.forEach(pk=>tal[pk.p.c]=(tal[pk.p.c]||0)+1);
   const top=Object.entries(tal).sort((a,b)=>b[1]-a[1])[0][0]; return (NAT_ABBR[top]||top)+" Select"; }
+/* names render as text and travel inside #g= links: strip markup + our delimiters (. ~ < >) */
+function cleanTeamName(s){ return (s||"").replace(/[.~<>]/g," ").replace(/\s+/g," ").trim().slice(0,18); }
+function myTeamName(){ return T.myName || "Your XI"; }
+function renameMyTeam(v){ T.myName=cleanTeamName(v);
+  const t=T.teams.find(x=>x.you); if(t){ t.name=myTeamName(); renderTeams(); } }
+function syncNameBox(){ const el=$("teamNameBox"); if(!el) return;
+  const yt=T.teams.find(t=>t.you); el.value = yt ? (yt.name==="Your XI"?"":yt.name) : (T.myName||""); }
 function setTourneyMode(m){ T.mode=m;
   T.teams.forEach(t=>{ if(t.picks) t.strength=Math.round(strengthOf(t.picks,m)); });   // re-rate in the chosen format
   renderModeSeg(); renderTeams(); }
@@ -1922,6 +1963,7 @@ function renderModeSeg(){ const el=$("tMode"); if(!el) return;
   el.querySelectorAll(".segbtn").forEach(b=> b.classList.toggle("on", b.getAttribute("data-m")===T.mode)); }
 function startDraftForTournament(){      // go draft an XI (in the tournament's format) to join with
   if(T.teams.length>=8){ $("codeError").textContent="Tournament is full (8 teams)."; return; }
+  T.myName=cleanTeamName($("teamNameBox").value);   // lock the team name in before the draft
   start(T.mode, true);                   // setup -> make-up -> draft; nextRound routes to join at pick 11
 }
 function joinTournamentWithMyXI(){       // called when a tournament-draft fills its 11th pick
@@ -1929,13 +1971,16 @@ function joinTournamentWithMyXI(){       // called when a tournament-draft fills
   const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; picks._shape=G.shape;
   T.teams=T.teams.filter(t=>!t.you);     // replace any previous "your XI"
   T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
-    players:G.picks.map(p=>p.p), name:"Your XI", flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
-  renderModeSeg(); renderTeams(); show("tournament");
+    players:G.picks.map(p=>p.p), name:myTeamName(), flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
+  renderModeSeg(); renderTeams(); syncNameBox(); show("tournament");
 }
 function renderInviteBanner(){
   const b=$("inviteBanner"); if(!b) return;
-  if(T.invited){ const n=T.teams.filter(t=>!t.isAI).length;
-    b.innerHTML=`🎟️ You've been invited to a <b>${T.mode==="wtc"?"WTC":"World Cup"}</b> tournament${n?` with ${n} team${n>1?"s":""} already in`:""}. Draft your XI to join.`;
+  if(T.invited){
+    const n=T.teams.filter(t=>!t.isAI&&!t.you).length, you=T.teams.some(t=>t.you);
+    b.innerHTML = you
+      ? `✅ <b>You're in.</b> Send the invite link below back to the group so everyone has your XI — then the host hits <b>GO</b> (or run it from here yourself).`
+      : `🎟️ You've been invited to a <b>${T.mode==="wtc"?"WTC":"World Cup"}</b> tournament${n?` — ${n} team${n>1?"s":""} already in`:""}. Name your team and draft your XI to join.`;
     b.style.display="block"; }
   else b.style.display="none";
 }
@@ -1944,24 +1989,44 @@ function openTournament(){
   if(!T.teams.some(t=>t.you) && G && G.picks && G.picks.every(Boolean)){     // seed YOUR drafted XI
     const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; picks._shape=G.shape; T.mode=G.mode;
     T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
-      players:G.picks.map(p=>p.p), name:"Your XI", flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
+      players:G.picks.map(p=>p.p), name:myTeamName(), flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
   }
-  renderModeSeg(); renderTeams(); show("tournament");
+  renderModeSeg(); renderTeams(); syncNameBox(); show("tournament");
 }
 function addCodeFromBox(){ addCode($("codeBox").value); }
-function addCode(raw){
-  const err=$("codeError"); err.textContent="";
-  let code=(raw||"").trim(); const m=code.match(/[#&]?t=([A-Za-z0-9_-]+)/); if(m) code=m[1];
-  if(!code) return;
-  if(T.teams.length>=8){ err.textContent="Tournament is full (8 teams)."; return; }
-  if(T.teams.some(t=>t.code===code)){ err.textContent="You already added this XI."; return; }
+/* one shared team token: "Name~code" (name optional, URL-decoded if it came from a link) */
+function splitNameCode(part){
+  let name=null, code=(part||"").trim();
+  const t=code.match(/[#&]?t=([A-Za-z0-9_-]+)/); if(t) code=t[1];
+  const k=code.lastIndexOf("~");
+  if(k>-1){ const rawName=code.slice(0,k);
+    try{ name=cleanTeamName(decodeURIComponent(rawName)); }catch(e){ name=cleanTeamName(rawName); }
+    code=code.slice(k+1).trim(); }
+  return {name, code};
+}
+function addCode(raw, givenName, quiet){
+  const err=$("codeError"); if(!quiet) err.textContent="";
+  const s=(raw||"").trim(); if(!s) return false;
+  const g=s.match(/[#&]g=([^\s#&]+)/) || s.match(/^g=([^\s#&]+)/);
+  if(g){                                  // a whole-lobby link pasted back: merge in only NEW teams
+    let parts=g[1].split(".").filter(Boolean);
+    if(parts[0]==="wc"||parts[0]==="wtc") parts.shift();
+    let added=0; parts.forEach(p=>{ if(addCode(p,null,true)) added++; });
+    if(!quiet && !added) err.textContent="No new teams in that link — they're all here already.";
+    if($("codeBox")) $("codeBox").value="";
+    renderTeams(); return added>0;
+  }
+  const nc=splitNameCode(s), code=nc.code, name=(givenName!=null?givenName:nc.name);
+  if(!code) return false;
+  if(T.teams.length>=8){ if(!quiet) err.textContent="Tournament is full (8 teams)."; return false; }
+  if(T.teams.some(t=>t.code===code)){ if(!quiet) err.textContent="You already added this XI."; return false; }
   const d=decodeXI(code);
-  if(!d.ok){ err.textContent=d.error; return; }
+  if(!d.ok){ if(!quiet) err.textContent=d.error; return false; }
   T.teams.push({id:"p"+T.teams.length, code, mode:d.mode, picks:d.picks, players:d.players, shape:d.shape,
-    name:teamNameFor(d.picks), flag:(FLAG[d.picks[0].p.c]||"🏏"), strength:Math.round(strengthOf(d.picks, T.mode)), isAI:false});
+    name:cleanTeamName(name)||teamNameFor(d.picks), flag:(FLAG[d.picks[0].p.c]||"🏏"), strength:Math.round(strengthOf(d.picks, T.mode)), isAI:false});
   if($("codeBox")) $("codeBox").value="";
-  if(d.warn) err.textContent="⚠ "+d.warn;
-  renderTeams();
+  if(d.warn && !quiet) err.textContent="⚠ "+d.warn;
+  renderTeams(); return true;
 }
 function removeTeam(i){ if(T.teams[i] && !T.teams[i].you){ T.teams.splice(i,1); renderTeams(); } }
 function renderTeams(){
@@ -1971,30 +2036,99 @@ function renderTeams(){
     ${t.you?'<span class="tyou">YOU</span>':''}<span class="tstr">${t.strength}</span>
     <button class="tcp" onclick="copyTeamCode(${i})" title="copy this XI's code to send">📋</button>
     ${t.you?'':`<button class="trm" onclick="removeTeam(${i})" aria-label="remove">×</button>`}</li>`).join("")
-    : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — draft your XI above, or paste a friend's code.</li>`;
-  const btn=$("btnRunTourney"); btn.disabled=real<2;
-  btn.textContent = real<2 ? "Add at least 2 teams" : `Run tournament — ${real} real${T.teams.length<8?` + ${8-T.teams.length} AI`:""}`;
+    : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — name your team and draft above, or paste a friend's code.</li>`;
+  const btn=$("btnRunTourney"), youIn=T.teams.some(t=>t.you);
+  btn.disabled = real<2;
+  btn.classList.toggle("waiting", youIn && real<2);   // host lobby: waiting for friends to join
+  btn.textContent = real>=2
+    ? `▶ GO — start the ${T.mode==="wtc"?"WTC":"World Cup"} (${real} real${T.teams.length<8?` + ${8-T.teams.length} AI`:""})`
+    : youIn ? "⏳ Waiting for friends to join — send the invite link above"
+            : "Add at least 2 teams to start";
   refreshInvite(); renderInviteBanner();
 }
-function copyTeamCode(i){ const t=T.teams[i]; if(t&&t.code) navigator.clipboard?.writeText(t.code).then(()=>toast("XI code copied — send it to a friend"),()=>toast("copy failed")); }
+function copyTeamCode(i){ const t=T.teams[i]; if(!(t&&t.code)) return;
+  const txt=(t.name?t.name+"~":"")+t.code;            // the name rides along with the code
+  navigator.clipboard?.writeText(txt).then(()=>toast("team code copied — send it to a friend"),()=>toast("copy failed")); }
 function refreshInvite(){
   const box=$("inviteBox"); if(!box) return;
-  const codes=T.teams.filter(t=>!t.isAI).map(t=>t.code);
-  if(!codes.length){ box.style.display="none"; return; }
-  T.inviteUrl = location.origin+location.pathname+"#g="+T.mode+"."+codes.join(".");
+  const real=T.teams.filter(t=>!t.isAI);
+  if(!real.length){ box.style.display="none"; T.inviteUrl=null; return; }
+  const part=t=> (t.name?encodeURIComponent(t.name)+"~":"")+t.code;   // names travel in the link
+  T.inviteUrl = location.origin+location.pathname+"#g="+T.mode+"."+real.map(part).join(".");
   $("inviteLink").textContent=T.inviteUrl; box.style.display="block";
 }
 function copyInvite(){ if(T.inviteUrl) navigator.clipboard?.writeText(T.inviteUrl).then(()=>toast("invite link copied"),()=>toast("copy failed")); }
-function runTourneyFromTeams(){
+function runTourneyFromTeams(){              // GO — run the campaign, then let it unfold in time
   if(T.teams.filter(t=>!t.isAI).length<2) return;
   runTournament(T.mode, T.teams, T.mode+"|"+T.teams.map(t=>t.code).join("."));
   renderTournamentResult(); show("tourneyResult");
+  startTourneyReveal();
 }
 function copyShare(){ if(G&&G.shareCode) navigator.clipboard?.writeText(G.shareCode).then(()=>toast("code copied"),()=>toast("copy failed")); }
 function copyShareLink(){ if(G&&G.shareCode) navigator.clipboard?.writeText(location.origin+location.pathname+"#t="+G.shareCode).then(()=>toast("link copied"),()=>toast("copy failed")); }
 function tourneyTab(name){
-  ["Standings","Bracket","Awards"].forEach(n=>{ const el=$("tab"+n); if(el) el.hidden=(n.toLowerCase()!==name); });
+  ["Standings","Bracket","Awards","Rivals"].forEach(n=>{ const el=$("tab"+n); if(el) el.hidden=(n.toLowerCase()!==name); });
   document.querySelectorAll("#resTabs .tab").forEach(b=> b.classList.toggle("on", b.getAttribute("data-t")===name));
+}
+
+/* ---- tournament reveal: the games unfold in time; head-to-heads get the spotlight ---- */
+let _txTimer=null;
+function clearTxReveal(){ if(_txTimer){ clearTimeout(_txTimer); _txTimer=null; } }
+function isH2H(f){ return !f.a.isAI && !f.b.isAI; }     // both XIs drafted by real people
+function txRowHTML(f, fresh){
+  const h2h=isH2H(f);
+  const side=team=>{ const cls="tx-team"+(f.result!=="D"?(f.winner===team?" win":" lose"):"");
+    return `<span class="${cls}">${team.flag} ${team.name}</span>`; };
+  return `<li class="tx-row${h2h?" tx-h2h":""}${fresh?" rx-new":""}">
+    <span class="tx-tag">${h2h?"⚔ head-to-head · ":""}${f.stage||""}</span>
+    <div class="tx-face">${side(f.a)}<span class="tx-v">v</span>${side(f.b)}</div>
+    <div class="tx-res">${f.line} · ${f.marginText}</div></li>`;
+}
+function startTourneyReveal(){
+  clearTxReveal();
+  const t=TOURNAMENT; if(!t) return;
+  $("trMain").style.display="none";                     // hide the verdict until the feed has played
+  $("txList").innerHTML=""; $("txCount").textContent="";
+  $("txSkip").style.display="flex";
+  const fx=t.fixtures, base=clamp(Math.round(5200/fx.length),130,650);
+  let i=0;
+  (function step(){
+    const f=fx[i];
+    $("txList").insertAdjacentHTML("beforeend", txRowHTML(f,true));
+    $("txCount").textContent=`match ${i+1} / ${fx.length}`;
+    const li=$("txList").lastElementChild; if(li&&li.scrollIntoView) li.scrollIntoView({block:"nearest",behavior:"smooth"});
+    i++;
+    if(i<fx.length) _txTimer=setTimeout(step, (isH2H(f)||isH2H(fx[i])) ? base*2.4 : base);  // linger on rivalries
+    else _txTimer=setTimeout(finishTourneyReveal, 650);
+  })();
+}
+function finishTourneyReveal(){
+  clearTxReveal();
+  const t=TOURNAMENT; if(!t) return;
+  $("txList").innerHTML=t.fixtures.map(f=>txRowHTML(f,false)).join("");   // full feed even when skipped
+  $("txCount").textContent=`${t.fixtures.length} matches`;
+  $("txSkip").style.display="none";
+  $("trMain").style.display="";
+  const b=$("champBanner"); b.classList.remove("in"); void b.offsetWidth; b.classList.add("in");
+  window.scrollTo(0,0);
+}
+/* Rivals tab — every human-v-human meeting, plus the overall ledger per pair */
+function rivalsHTML(t,h2h){
+  const pairs={};
+  h2h.forEach(f=>{ const k=[f.a.id,f.b.id].sort().join("|");
+    const P=(pairs[k] ||= {a:f.a,b:f.b,wa:0,wb:0,d:0,fx:[]});
+    P.fx.push(f);
+    if(f.result==="D") P.d++;
+    else if(f.winner.id===P.a.id) P.wa++; else P.wb++; });
+  return Object.values(pairs).map(P=>{
+    const drew=P.d?` <span style="color:var(--dim);font-size:12px">(${P.d} drawn)</span>`:"";
+    return `<div class="rivalry-head">⚔ <b>${P.a.flag} ${P.a.name}</b>
+        <span class="rscore">${P.wa} – ${P.wb}</span>
+        <b>${P.b.name} ${P.b.flag}</b>${drew}</div>`
+      + P.fx.map(f=>`<div class="bx" style="border-color:var(--gold)"><div class="bxr">${f.stage||""}</div>
+        <div class="bxf"><span class="${f.winner===f.a?'bw':'bl'}">${f.a.flag} ${f.a.name}</span><span class="bvs">v</span><span class="${f.winner===f.b?'bw':'bl'}">${f.b.name} ${f.b.flag}</span></div>
+        <div class="bxs">${f.line} · ${f.marginText}</div></div>`).join("");
+  }).join("");
 }
 function renderTournamentResult(){
   const t=TOURNAMENT; if(!t){ show("home"); return; }
@@ -2020,16 +2154,23 @@ function renderTournamentResult(){
     aw("Most 50s",a.fifties,a.fifties&&a.fifties.fifties)+
     aw("Most 100s",a.hundreds,a.hundreds&&a.hundreds.hundreds)
   ) : "<p style='color:var(--dim)'>No awards.</p>";
+  const h2h=t.fixtures.filter(isH2H);                       // rivalry tab only when friends actually met
+  let rb=document.querySelector('#resTabs [data-t="rivals"]');
+  if(h2h.length){
+    if(!rb) $("resTabs").insertAdjacentHTML("beforeend",`<button class="tab" data-t="rivals" onclick="tourneyTab('rivals')">⚔ Rivals</button>`);
+    $("tabRivals").innerHTML=rivalsHTML(t,h2h);
+  } else { if(rb) rb.remove(); $("tabRivals").innerHTML=""; }
   tourneyTab("standings");
 }
 function importFromHash(){     // a friend opening an invite link lands here -> tournament lobby, then they draft to join
   const h=(location.hash||"").slice(1);
-  const t=h.match(/^t=([A-Za-z0-9_-]+)/), g=h.match(/^g=([A-Za-z0-9_.\-]+)/);
-  if(t){ const d=decodeXI(t[1]); T={teams:[], mode:(d.ok?d.mode:"wc"), invited:true};
-    addCode(t[1]); renderModeSeg(); renderTeams(); show("tournament"); return true; }
+  const t=h.match(/^t=([A-Za-z0-9_-]+)/), g=h.match(/^g=(.+)$/);
+  if(t){ const d=decodeXI(t[1]); T={teams:[], mode:(d.ok?d.mode:"wc"), invited:true, myName:""};
+    addCode(t[1]); renderModeSeg(); renderTeams(); syncNameBox(); show("tournament"); return true; }
   if(g){ const parts=g[1].split(".").filter(Boolean); let mode="wc";
     if(parts[0]==="wc"||parts[0]==="wtc") mode=parts.shift();      // group links carry the host's format
-    T={teams:[], mode, invited:true}; parts.forEach(c=>addCode(c)); renderModeSeg(); renderTeams(); show("tournament"); return true; }
+    T={teams:[], mode, invited:true, myName:""}; parts.forEach(c=>addCode(c,null,true));
+    renderModeSeg(); renderTeams(); syncNameBox(); show("tournament"); return true; }
   return false;
 }
 
