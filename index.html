@@ -1483,7 +1483,7 @@ function finishReveal(){
   $("rGrid").textContent=c._grid||"";
   renderResultExtras();                                                // full list + awards + record
   if(G.picks && G.picks.every(Boolean)){                               // offer the share code
-    G.shareCode=encodeXI(G.mode, G.picks.map(pk=>pk.p));
+    G.shareCode=encodeXI(G.mode, G.picks.map(pk=>pk.p), G.makeup);
     $("shareCode").textContent=G.shareCode; $("shareCard").style.display="block";
   }
 }
@@ -1506,21 +1506,37 @@ function awardsHTML(a){
    DB IS APPEND-ONLY: new players push to the END, never reordered/deleted/index-reused, so a
    player's DB index is a stable id forever. Breaking that silently invalidates every shared code
    — bump CODEC_VERSION + ship a remap instead. DB.length must stay <= 512 (9-bit ids). */
-const CODEC_VERSION=1, MODE_CODE={wc:0,wtc:1}, MODE_NAME=["wc","wtc"], ID_BITS=9, PAYLOAD_BYTES=15;
+/* CODEC_VERSION 1 = fixed-make-up code (15 bytes, ids only). CODEC_VERSION 2 adds a make-up
+   byte (16 bytes) so a CUSTOM make-up survives the round-trip — the receiver rebuilds the SAME
+   ordered shape the sender drafted on, keeping fit/order/strength consistent (verify-canonical:
+   the receiver recomputes fit against the sender's actual shape, not a guessed one). A default
+   make-up still emits a v1 code, so every previously-shared code stays byte-identical & valid. */
+const CODEC_VERSION=2, MODE_CODE={wc:0,wtc:1}, MODE_NAME=["wc","wtc"], ID_BITS=9;
+const PAYLOAD_BYTES={1:15, 2:16};            // bytes per codec version
 if(DB.length>512) console.warn("Perfect XI: DB exceeds 512 players — share-codes need >9-bit ids (bump CODEC_VERSION).");
 const _b64=s=>btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 function _unb64(s){ s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; return atob(s); }
 function fletcher8(bytes,upTo){ let a=0,b=0; for(let i=0;i<upTo;i++){ a=(a+bytes[i])%255; b=(b+a)%255; } return ((b<<4)^a)&0xff; }
 
-function encodeXI(mode, players){            // players = 11 player objects in slot order
-  const ids=players.map(p=>DB.indexOf(p));
-  const bytes=new Uint8Array(PAYLOAD_BYTES);
-  bytes[0]=(CODEC_VERSION<<4)|MODE_CODE[mode];
+/* make-up <-> single byte: bat(3b 0-7) | ar(2b 0-3) | pace(3b 0-7). spin derived = 10-bat-ar-pace. */
+function packMakeup(m){ return ((m.bat&7)<<5)|((m.ar&3)<<3)|(m.pace&7); }
+function unpackMakeup(b){ const bat=(b>>5)&7, ar=(b>>3)&3, pace=b&7;
+  return {bat, ar, pace, spin:MK.outfield-bat-ar-pace}; }
+function isDefaultMakeup(mode,m){ const d=MK_DEFAULT[mode];
+  return m && m.bat===d.bat&&m.ar===d.ar&&m.pace===d.pace&&m.spin===d.spin; }
+
+function encodeXI(mode, players, makeup){     // players = 11 player objects in slot order
+  // v1 when make-up is the mode default (keeps old codes byte-identical); else v2 carrying make-up
+  const v = (makeup && !isDefaultMakeup(mode,makeup)) ? 2 : 1;
+  const N = PAYLOAD_BYTES[v], ids=players.map(p=>DB.indexOf(p));
+  const bytes=new Uint8Array(N);
+  bytes[0]=(v<<4)|MODE_CODE[mode];
   let acc=0,bits=0,bi=1;
   for(const id of ids){ acc=(acc<<ID_BITS)|(id&0x1ff); bits+=ID_BITS;
     while(bits>=8){ bits-=8; bytes[bi++]=(acc>>bits)&0xff; } }
-  if(bits>0) bytes[bi++]=(acc<<(8-bits))&0xff;
-  bytes[14]=fletcher8(bytes,14);
+  if(bits>0) bytes[bi++]=(acc<<(8-bits))&0xff;            // ids fill bytes 1..13
+  if(v===2) bytes[14]=packMakeup(makeup);                 // v2: make-up byte at index 14
+  bytes[N-1]=fletcher8(bytes,N-1);                         // checksum is always the LAST byte
   let bin=""; for(const x of bytes) bin+=String.fromCharCode(x);
   return _b64(bin);
 }
@@ -1529,22 +1545,28 @@ function decodeXI(raw){                       // pure TOTAL function: never thro
     const code=(raw||"").trim().replace(/[^A-Za-z0-9_-]+$/,"");   // strip glued trailing punctuation
     if(!/^[A-Za-z0-9_-]+$/.test(code)) return {ok:false,error:"This code has invalid characters — it may have been corrupted when copied."};
     const bin=_unb64(code);
-    if(bin.length!==PAYLOAD_BYTES) return {ok:false,error:"This code is the wrong length — it looks incomplete or from a different version."};
     const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
-    const ver=bytes[0]>>4, modeBits=bytes[0]&0x0f;
+    const ver=bytes.length?(bytes[0]>>4):0, modeBits=bytes.length?(bytes[0]&0x0f):0;
     if(ver>CODEC_VERSION) return {ok:false,error:"This code was made by a newer version of the app. Update to open it."};
+    const N=PAYLOAD_BYTES[ver];
+    if(!N || bin.length!==N) return {ok:false,error:"This code is the wrong length — it looks incomplete or from a different version."};
     if(modeBits>1) return {ok:false,error:"Unrecognised team mode in this code."};
-    if(fletcher8(bytes,14)!==bytes[14]) return {ok:false,error:"This code seems corrupted (failed integrity check). Ask your friend to resend it."};
+    if(fletcher8(bytes,N-1)!==bytes[N-1]) return {ok:false,error:"This code seems corrupted (failed integrity check). Ask your friend to resend it."};
     const ids=[]; let acc=0,bits=0,bi=1;
     while(ids.length<11){ acc=(acc<<8)|bytes[bi++]; bits+=8; if(bits>=ID_BITS){ bits-=ID_BITS; ids.push((acc>>bits)&0x1ff); } }
     const bad=ids.map((id,i)=>id>=DB.length?i+1:null).filter(x=>x);
     if(bad.length) return {ok:false,error:`Unknown player(s) in slots ${bad.join(", ")} — this code may be from an older squad list.`};
-    const mode=MODE_NAME[modeBits], shape=SHAPES[mode];
+    const mode=MODE_NAME[modeBits];
+    // v1: fixed default make-up · v2: the sender's chosen make-up. Rebuild the ORDERED shape; a
+    // corrupt v2 byte that yields an impossible make-up falls back to default (fit stays sane).
+    let makeup = ver===2 ? unpackMakeup(bytes[14]) : {...MK_DEFAULT[mode]};
+    if(!mkValid(makeup).ok) makeup = {...MK_DEFAULT[mode]};
+    const shape = buildShape(mode, makeup);
     const players=ids.map(id=>DB[id]);
     const picks=ids.map((id,i)=>({p:DB[id], f:fit(DB[id], shape[i])}));
-    picks._mode=mode;
+    picks._mode=mode; picks._makeup=makeup; picks._shape=shape;
     const seen=new Set(); const dup=ids.some(id=>seen.has(id)||(seen.add(id),false));
-    return {ok:true, mode, players, picks, warn: dup?"This XI has a duplicated player.":null};
+    return {ok:true, mode, makeup, shape, players, picks, warn: dup?"This XI has a duplicated player.":null};
   }catch(e){ return {ok:false,error:"This code could not be read — it may be incomplete or corrupted."}; }
 }
 
@@ -1553,7 +1575,8 @@ function decodeXI(raw){                       // pure TOTAL function: never thro
    SAME tournament (consistent truth with no backend). ---- */
 function mulberry32(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
-function strengthOf(picks){ const prev=G; G={picks, mode:(picks._mode||(prev&&prev.mode)||"wc")}; const v=teamStrength(); G=prev; return v; }
+function strengthOf(picks){ const prev=G; const mode=picks._mode||(prev&&prev.mode)||"wc";
+  G={picks, mode, shape:picks._shape||SHAPES[mode]}; const v=teamStrength(); G=prev; return v; }
 
 function accrueBox(picks, batInns, bowlInns){           // like accrue(), but for an explicit team's picks
   const seen=new Set();
@@ -1565,7 +1588,7 @@ function accrueBox(picks, batInns, bowlInns){           // like accrue(), but fo
 function mpAccrue(team, inningsTotals, wktsTaken, mode){  // attribute one fixture's box to a real team
   if(!team.picks) return;                                // AI teams have no players
   const sp=G.picks, ss=G.shape, sm=G.mode, M=mode||team.mode;
-  G.picks=team.picks; G.shape=SHAPES[M]; G.mode=M;       // batWeights/rating read these (tournament format)
+  G.picks=team.picks; G.shape=team.shape||(team.picks&&team.picks._shape)||SHAPES[M]; G.mode=M;  // actual shape (custom make-up safe)
   try{
     const batInns=inningsTotals.map(t=>allocRuns(Math.max(1,Math.round(t))));
     const bowl=[allocWickets(clamp(Math.round(wktsTaken),0,20))];
@@ -1899,21 +1922,21 @@ function makeRandomPicks(mode){
     const p=cands[Math.floor(Math.random()*cands.length)] || DB.find(p=>p[fmt]!=null && !used.has(p.n));
     used.add(p.n); picks.push({p, f:fit(p,role)});
   }
-  picks._mode=mode; return picks;
+  picks._mode=mode; picks._shape=shape; return picks;
 }
 function addRandomXI(){
   const err=$("codeError"); err.textContent="";
   if(T.teams.length>=8){ err.textContent="Tournament is full (8 teams)."; return; }
   const picks=makeRandomPicks(T.mode), players=picks.map(pk=>pk.p), code=encodeXI(T.mode, players);
   if(T.teams.some(t=>t.code===code)){ err.textContent="That random XI is already in — try again."; return; }
-  T.teams.push({id:"r"+T.teams.length, code, mode:T.mode, picks, players,
+  T.teams.push({id:"r"+T.teams.length, code, mode:T.mode, picks, players, shape:picks._shape,
     name:teamNameFor(picks)+" 🎲", flag:(FLAG[picks[0].p.c]||"🎲"), strength:Math.round(strengthOf(picks,T.mode)), isAI:false});
   renderTeams();
 }
 function openTournament(){
   if(!T.teams.some(t=>t.you) && G && G.picks && G.picks.every(Boolean)){     // seed YOUR drafted XI
-    const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; T.mode=G.mode;
-    T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p)), mode:G.mode, picks,
+    const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; picks._shape=G.shape; T.mode=G.mode;
+    T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
       players:G.picks.map(p=>p.p), name:"Your XI", flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
   }
   renderModeSeg(); renderTeams(); show("tournament");
@@ -1927,7 +1950,7 @@ function addCode(raw){
   if(T.teams.some(t=>t.code===code)){ err.textContent="You already added this XI."; return; }
   const d=decodeXI(code);
   if(!d.ok){ err.textContent=d.error; return; }
-  T.teams.push({id:"p"+T.teams.length, code, mode:d.mode, picks:d.picks, players:d.players,
+  T.teams.push({id:"p"+T.teams.length, code, mode:d.mode, picks:d.picks, players:d.players, shape:d.shape,
     name:teamNameFor(d.picks), flag:(FLAG[d.picks[0].p.c]||"🏏"), strength:Math.round(strengthOf(d.picks, T.mode)), isAI:false});
   if($("codeBox")) $("codeBox").value="";
   if(d.warn) err.textContent="⚠ "+d.warn;
