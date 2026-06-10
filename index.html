@@ -297,7 +297,6 @@
   .ttbl th,.ttbl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
   .ttbl th{color:var(--dim);font-size:10px;text-transform:uppercase;font-family:var(--mono)}
   .ttbl td:not(:first-child),.ttbl th:not(:first-child){text-align:right;font-family:var(--mono)}
-  .ttbl tr.tai td{color:var(--dim)}
   .tgrp{font-family:var(--mono);font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px}
   .bx{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
   .bx .bxr{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
@@ -356,8 +355,8 @@
       </div>
     </div>
     <div class="stage" style="margin-top:14px;text-align:center">
-      <button class="btn" style="width:100%" onclick="openTournament()">🏆 Play a tournament with friends</button>
-      <p style="color:var(--dim);font-size:13px;margin:10px 0 0">Name your team, draft your XI, invite friends with a link — when everyone's in, hit GO and watch the games unfold. All in the browser, no sign-up.</p>
+      <button class="btn" style="width:100%" onclick="openTournament()">🏆 Play friends — tournament or head-to-head</button>
+      <p style="color:var(--dim);font-size:13px;margin:10px 0 0">Name your team, draft your XI, invite friends with a link — a 4-to-8 player tournament (real teams only), or go head-to-head in a once-off or a 3/5-match series to settle who built the best team. When everyone's in, hit GO and watch the games unfold.</p>
     </div>
 
     <div class="stage faq">
@@ -369,7 +368,7 @@
       <details class="faq-item"><summary>What are the two modes?</summary>
         <p><b>World Cup (ODI)</b> — a one-day XI: top a 10-team group, win the semi-final and final, all 11 matches, for the 11–0. <b>World Test Championship</b> — a Test XI through a 6-series home-and-away cycle, finish top two, win the one-off final, go unbeaten for the mace.</p></details>
       <details class="faq-item"><summary>How does multiplayer work?</summary>
-        <p>Open “Play a tournament”, <b>name your team</b>, draft your XI, and send the invite link. Friends open it, name their team and draft — the <b>live lobby</b> connects your browsers directly, so they appear on your screen as they join, and when everyone's in <b>only the host hits GO</b>: the matches then play out one by one on every screen at once, with head-to-head games between friends given the spotlight and a Rivals tab at the end. Empty seats are filled with AI sides. No accounts and no game server — if the live connection can't be made, friends just send their link back and you paste it in. The same teams always produce the same tournament.</p></details>
+        <p>Open “Play friends”, <b>name your team</b>, draft your XI, and send the invite link. Friends open it, name their team and draft — the <b>live lobby</b> connects your browsers directly, so they appear on your screen as they join, and when everyone's in <b>only the host hits GO</b>: the matches then play out one by one on every screen at once, with your own games given the spotlight and a Rivals tab at the end. Tournaments are <b>real players only — 4 to 8 teams, no AI</b>; head-to-head is you against one rival, once-off or a 3/5-match series. No accounts and no game server — if the live connection can't be made, friends just send their link back and you paste it in. The same teams always produce the same tournament.</p></details>
       <details class="faq-item"><summary>How is a result and margin decided?</summary>
         <p>A transparent ratings model decides each match, then a realistic scoreline is generated to match it: a win batting first is by runs, a successful chase is by wickets, a Test can be won by an innings or end in a draw — exactly as in real cricket.</p></details>
       <details class="faq-item"><summary>Are the ratings official? Does my data leave the page?</summary>
@@ -503,13 +502,22 @@
 
   <!-- TOURNAMENT -->
   <section id="tournament" class="scr">
-    <div class="brand"><h1 style="font-size:32px">Tournament</h1>
-      <p>Pick a format, draft your XI, then invite friends with a link. Up to 8 teams (88 players); empty seats are filled with AI teams.</p></div>
+    <div class="brand"><h1 style="font-size:32px">Play friends</h1>
+      <p>Draft your XI and invite friends with a link — a real-players-only tournament (4 to 8 teams, no AI), or go head-to-head: a once-off or a series to settle who built the best team.</p></div>
     <div class="stage">
       <div id="inviteBanner" class="invite-banner" style="display:none"></div>
+      <div class="seg" id="tKind" style="margin-bottom:8px">
+        <button class="segbtn on" data-k="tourney" onclick="setTourneyKind('tourney')">🏆 Tournament</button>
+        <button class="segbtn" data-k="h2h" onclick="setTourneyKind('h2h')">⚔ Head-to-Head</button>
+      </div>
       <div class="seg" id="tMode">
         <button class="segbtn on" data-m="wc" onclick="setTourneyMode('wc')">World Cup</button>
         <button class="segbtn" data-m="wtc" onclick="setTourneyMode('wtc')">WTC</button>
+      </div>
+      <div class="seg" id="tLen" style="display:none;margin-top:8px">
+        <button class="segbtn on" data-l="1" onclick="setTourneyLen(1)">Once-off</button>
+        <button class="segbtn" data-l="3" onclick="setTourneyLen(3)">3-match series</button>
+        <button class="segbtn" data-l="5" onclick="setTourneyLen(5)">5-match series</button>
       </div>
       <input id="teamNameBox" class="codefield" style="width:100%;margin-top:12px" maxlength="18" autocomplete="off" spellcheck="false" placeholder="Name your team — e.g. Raazik's Royals" oninput="renameMyTeam(this.value)">
       <button class="btn" style="width:100%;margin-top:8px" onclick="startDraftForTournament()">🏏 Draft your XI to join</button>
@@ -1681,39 +1689,27 @@ function tFixture(a,b,mode,isFinal){
   else marginText=`${winner.name} won by ${rec.margin} ${rec.by==="runs"?"runs":"wkts"}`;
   return {a,b,mode,isFinal:!!isFinal,result:res,winner,loser,by:rec.by,margin:rec.margin,marginText,line:rec.line};
 }
-function makeAITeam(i, lo, hi){
-  const mid=(lo+hi)/2, spread=Math.max(6,hi-lo);
-  return {id:"ai"+i, name:"AI "+String.fromCharCode(65+i), flag:"🤖", picks:null, isAI:true,
-          strength:Math.round(clamp(mid+(Math.random()*spread-spread/2),55,96))};
-}
-function padToEight(teams){
-  const field=teams.slice(), real=field.filter(t=>!t.isAI).map(t=>t.strength);
-  const lo=real.length?Math.min(...real):62, hi=real.length?Math.max(...real):82;
-  let i=0; while(field.length<8) field.push(makeAITeam(i++,lo,hi));
-  return field;
-}
 let TOURNAMENT=null;
+/* Tournaments are REAL PLAYERS ONLY — 4 to 8 drafted teams, no AI filler. The World Cup is a
+   single league of everyone (works for any field of 4-8), top 4 to the semis (1v4, 2v3), final. */
 function runTournament(hostMode, teams, seedSrc){
   const prevG=G, _mr=Math.random; Math.random=mulberry32(hashStr(seedSrc||"seed"));
   G={picks:null, mode:hostMode, box:{}};                 // transient working state — never clobbers the solo game
   try{
-    const field=padToEight(teams);
+    const field=teams.slice();
     const owner={}, pmap={};
     field.forEach(t=>{ if(t.picks) t.picks.forEach(pk=>{ owner[pk.p.n]=t.name; pmap[pk.p.n]=pk.p; }); });
     const t={mode:hostMode, fixtures:[], standings:null, bracket:[], champion:null, owner, pmap, field};
     if(hostMode==="wc"){
-      const sd=[...field].sort((x,y)=>y.strength-x.strength);
-      const A=[sd[0],sd[3],sd[4],sd[7]], B=[sd[1],sd[2],sd[5],sd[6]];
       const pts=Object.fromEntries(field.map(x=>[x.id,{w:0,d:0,l:0,pts:0,team:x}]));
-      const playGroup=(g,label)=>{ for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){ const f=tFixture(g[i],g[j],"wc"); f.stage=label; t.fixtures.push(f);
-        pts[f.winner.id].w++; pts[f.winner.id].pts+=2; pts[f.loser.id].l++; } };
-      playGroup(A,"Group A"); playGroup(B,"Group B");
-      const tbl=g=>g.map(x=>pts[x.id]).sort((p,q)=>q.pts-p.pts||q.team.strength-p.team.strength);
-      const tA=tbl(A), tB=tbl(B);
-      const sfA=tFixture(tA[0].team,tB[1].team,"wc",true); sfA.stage="Semi-final"; t.fixtures.push(sfA);
-      const sfB=tFixture(tB[0].team,tA[1].team,"wc",true); sfB.stage="Semi-final"; t.fixtures.push(sfB);
+      for(let i=0;i<field.length;i++)for(let j=i+1;j<field.length;j++){
+        const f=tFixture(field[i],field[j],"wc"); f.stage="League"; t.fixtures.push(f);
+        pts[f.winner.id].w++; pts[f.winner.id].pts+=2; pts[f.loser.id].l++; }
+      const tbl=Object.values(pts).sort((p,q)=>q.pts-p.pts||q.team.strength-p.team.strength);
+      const sfA=tFixture(tbl[0].team,tbl[3].team,"wc",true); sfA.stage="Semi-final"; t.fixtures.push(sfA);
+      const sfB=tFixture(tbl[1].team,tbl[2].team,"wc",true); sfB.stage="Semi-final"; t.fixtures.push(sfB);
       const fin=tFixture(sfA.winner,sfB.winner,"wc",true); fin.stage="Final"; t.fixtures.push(fin);
-      t.standings={A:tA,B:tB}; t.bracket=[{round:"Semi-final",fx:sfA},{round:"Semi-final",fx:sfB},{round:"Final",fx:fin}];
+      t.standings=tbl; t.bracket=[{round:"Semi-final",fx:sfA},{round:"Semi-final",fx:sfB},{round:"Final",fx:fin}];
       t.champion=fin.winner;
     } else {
       const WIN=12,DRAW=4, pts=Object.fromEntries(field.map(x=>[x.id,{w:0,d:0,l:0,P:0,pts:0,team:x}]));
@@ -1951,7 +1947,14 @@ function resetGame(){ DRAFT_FOR_TOURNEY=false; G=null; route("home"); }
    lobby link merges in only the new teams. When everyone's in, the host hits GO and the
    games unfold in time on the match feed. Team names ride along in links/codes as
    "Name~code" — old plain codes still work (auto-named), so nothing is invalidated. */
-let T={teams:[], mode:"wc", myName:""};                   // max 8 teams (88 players)
+let T={teams:[], mode:"wc", myName:"", kind:"tourney", len:1};   // kind: tourney (8 teams) | h2h (you v 1 rival, len matches)
+function maxTeams(){ return T.kind==="h2h" ? 2 : 8; }
+function fmtName(){ return T.mode==="wtc" ? "Test" : "ODI"; }
+function gameLabel(){ return T.kind==="h2h"
+  ? (T.len===1 ? `once-off ${fmtName()} head-to-head` : `${T.len}-${fmtName()} head-to-head series`)
+  : `${T.mode==="wtc"?"WTC":"World Cup"} tournament`; }
+function setTourneyKind(k){ T.kind = k==="h2h" ? "h2h" : "tourney"; renderModeSeg(); renderTeams(); }
+function setTourneyLen(l){ T.len = [1,3,5].includes(+l) ? +l : 1; renderModeSeg(); renderTeams(); }
 function teamNameFor(picks){ const tal={}; picks.forEach(pk=>tal[pk.p.c]=(tal[pk.p.c]||0)+1);
   const top=Object.entries(tal).sort((a,b)=>b[1]-a[1])[0][0]; return (NAT_ABBR[top]||top)+" Select"; }
 /* names render as text and travel inside #g= links: strip markup + our delimiters (. ~ < >) */
@@ -1965,9 +1968,15 @@ function setTourneyMode(m){ T.mode=m;
   T.teams.forEach(t=>{ if(t.picks) t.strength=Math.round(strengthOf(t.picks,m)); });   // re-rate in the chosen format
   renderModeSeg(); renderTeams(); }
 function renderModeSeg(){ const el=$("tMode"); if(!el) return;
-  el.querySelectorAll(".segbtn").forEach(b=> b.classList.toggle("on", b.getAttribute("data-m")===T.mode)); }
+  el.querySelectorAll(".segbtn").forEach(b=>{ const m=b.getAttribute("data-m");
+    b.classList.toggle("on", m===T.mode);
+    b.textContent = T.kind==="h2h" ? (m==="wc"?"ODI":"Test") : (m==="wc"?"World Cup":"WTC"); });
+  const k=$("tKind"); if(k) k.querySelectorAll(".segbtn").forEach(b=> b.classList.toggle("on", b.getAttribute("data-k")===(T.kind||"tourney")));
+  const L=$("tLen"); if(L){ L.style.display = T.kind==="h2h" ? "flex" : "none";
+    L.querySelectorAll(".segbtn").forEach(b=> b.classList.toggle("on", +b.getAttribute("data-l")===T.len)); } }
 function startDraftForTournament(){      // go draft an XI (in the tournament's format) to join with
-  if(T.teams.length>=8){ $("codeError").textContent="Tournament is full (8 teams)."; return; }
+  if(T.teams.length>=maxTeams() && !T.teams.some(t=>t.you)){
+    $("codeError").textContent=T.kind==="h2h"?"Head-to-head is you and one rival — it's full.":"Tournament is full (8 teams)."; return; }
   T.myName=cleanTeamName($("teamNameBox").value);   // lock the team name in before the draft
   start(T.mode, true);                   // setup -> make-up -> draft; nextRound routes to join at pick 11
 }
@@ -1989,6 +1998,8 @@ function renderInviteBanner(){
     const n=T.teams.filter(t=>!t.isAI&&!t.you).length, you=T.teams.some(t=>t.you);
     b.innerHTML = you
       ? `✅ <b>You're in.</b> Send the invite link below back to the group so everyone has your XI — then the host hits <b>GO</b> (or run it from here yourself).`
+      : T.kind==="h2h"
+      ? `⚔ <b>You've been challenged</b> to a <b>${gameLabel()}</b>. Name your team, draft your XI, and settle who built the best side.`
       : `🎟️ You've been invited to a <b>${T.mode==="wtc"?"WTC":"World Cup"}</b> tournament${n?` — ${n} team${n>1?"s":""} already in`:""}. Name your team and draft your XI to join.`;
     b.style.display="block"; }
   else b.style.display="none";
@@ -2022,6 +2033,7 @@ function addCode(raw, givenName, quiet){
   if(g){                                  // a whole-lobby link pasted back: merge in only NEW teams
     let parts=g[1].split(".").filter(Boolean);
     if(parts[0]==="wc"||parts[0]==="wtc") parts.shift();
+    if(/^h2h[135]$/.test(parts[0]||"")){ T.kind="h2h"; T.len=+parts[0].slice(3); parts.shift(); renderModeSeg(); }
     let added=0; parts.forEach(p=>{ if(addCode(p,null,true)) added++; });
     const pm=s.match(/[#&]p=([A-Za-z0-9_-]+)/);          // link carries a live room → hop in
     if(pm && !LIVE.isHost && !LIVE.hostConn) liveJoin(pm[1]);
@@ -2031,7 +2043,7 @@ function addCode(raw, givenName, quiet){
   }
   const nc=splitNameCode(s), code=nc.code, name=(givenName!=null?givenName:nc.name);
   if(!code) return false;
-  if(T.teams.length>=8){ if(!quiet) err.textContent="Tournament is full (8 teams)."; return false; }
+  if(T.teams.length>=maxTeams()){ if(!quiet) err.textContent=T.kind==="h2h"?"Head-to-head is you and one rival — it's full.":"Tournament is full (8 teams)."; return false; }
   if(T.teams.some(t=>t.code===code)){ if(!quiet) err.textContent="You already added this XI."; return false; }
   const d=decodeXI(code);
   if(!d.ok){ if(!quiet) err.textContent=d.error; return false; }
@@ -2050,18 +2062,21 @@ function renderTeams(){
     <button class="tcp" onclick="copyTeamCode(${i})" title="copy this XI's code to send">📋</button>
     ${t.you?'':`<button class="trm" onclick="removeTeam(${i})" aria-label="remove">×</button>`}</li>`).join("")
     : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — name your team and draft above, or paste a friend's code.</li>`;
-  const btn=$("btnRunTourney"), youIn=T.teams.some(t=>t.you);
+  const btn=$("btnRunTourney"), youIn=T.teams.some(t=>t.you), h2h=T.kind==="h2h";
+  const minReal=h2h?2:4;                                   // tournaments: 4-8 REAL teams, never AI
   const remote=!!(LIVE.hostConn && LIVE.hostConn.open);    // connected invitee: the host starts, not you
-  btn.disabled = remote || real<2;
-  btn.classList.toggle("waiting", remote || (youIn && real<2));
+  const connNote=(LIVE.isHost && LIVE.conns.length)?` · ${LIVE.conns.length} connected`:"";
+  btn.disabled = remote || real<minReal;
+  btn.classList.toggle("waiting", remote || (youIn && real<minReal));
   btn.textContent = remote
     ? "⏳ Lobby is live — only the host hits GO"
-    : real>=2
-    ? `▶ GO — start the ${T.mode==="wtc"?"WTC":"World Cup"} (${real} real${T.teams.length<8?` + ${8-T.teams.length} AI`:""})`
-    : youIn ? (LIVE.isHost && LIVE.conns.length
-                ? `⏳ ${LIVE.conns.length} friend${LIVE.conns.length>1?"s":""} connected — waiting for their XI…`
-                : "⏳ Waiting for friends to join — send the invite link above")
-            : "Add at least 2 teams to start";
+    : real>=minReal
+    ? (h2h ? `▶ GO — ${T.teams.filter(t=>!t.isAI)[0].name} v ${T.teams.filter(t=>!t.isAI)[1].name}`
+           : `▶ GO — start the ${T.mode==="wtc"?"WTC":"World Cup"} (${real} teams)`)
+    : youIn ? (h2h ? "⏳ Waiting for your rival — send the invite link above"+connNote
+                   : `⏳ ${real} of 4 teams minimum — waiting for friends to join`+connNote)
+            : (h2h ? "You and one rival both need an XI"
+                   : "Tournaments need 4 to 8 real teams — no AI fillers");
   refreshInvite(); renderInviteBanner();
   if(LIVE.isHost && LIVE.conns.length) liveBroadcast({t:"lobby",...lobbySnapshot()});   // mirror to joiners
 }
@@ -2074,18 +2089,44 @@ function refreshInvite(){
   if(!real.length){ box.style.display="none"; T.inviteUrl=null; return; }
   const part=t=> (t.name?encodeURIComponent(t.name)+"~":"")+t.code;   // names travel in the link
   const pid=LIVE.isHost ? LIVE.peerId : T.hostPeer;                   // live-lobby room id rides along
-  T.inviteUrl = location.origin+location.pathname+"#g="+T.mode+"."+real.map(part).join(".")+(pid?"&p="+pid:"");
+  const kindTok=T.kind==="h2h" ? "h2h"+T.len+"." : "";                // head-to-head + series length
+  T.inviteUrl = location.origin+location.pathname+"#g="+T.mode+"."+kindTok+real.map(part).join(".")+(pid?"&p="+pid:"");
   $("inviteLink").textContent=T.inviteUrl; box.style.display="block";
 }
 function copyInvite(){ if(T.inviteUrl) navigator.clipboard?.writeText(T.inviteUrl).then(()=>toast("invite link copied"),()=>toast("copy failed")); }
 function runTourneyFromTeams(){              // GO — host-only in a live lobby; broadcast, then unfold
-  if(T.teams.filter(t=>!t.isAI).length<2) return;
+  const real=T.teams.filter(t=>!t.isAI);
+  if(real.length<(T.kind==="h2h"?2:4)) return;             // h2h: exactly you + rival · tournament: 4-8 real
   if(LIVE.hostConn && LIVE.hostConn.open) return;          // invitees never start a live lobby
-  const seed=T.mode+"|"+T.teams.map(t=>t.code).join(".");
+  const seed=(T.kind==="h2h"?"h2h"+T.len+"|":"")+T.mode+"|"+real.map(t=>t.code).join(".");
   if(LIVE.isHost && LIVE.conns.length) liveBroadcast({t:"go", seed, ...lobbySnapshot()});
-  runTournament(T.mode, T.teams, seed);
+  if(T.kind==="h2h") runSeries(T.mode, real.slice(0,2), T.len, seed);
+  else runTournament(T.mode, T.teams, seed);
   renderTournamentResult(); show("tourneyResult");
   startTourneyReveal();
+}
+
+/* ---- head-to-head series: your XI v one rival, a once-off or 3/5-match series.
+   Same seeded match engine + box scores as the tournament; Tests can be drawn, the
+   series winner is most wins (level = series shared). Settles who built the best team. ---- */
+function runSeries(mode, teams, len, seedSrc){
+  const prevG=G, _mr=Math.random; Math.random=mulberry32(hashStr(seedSrc||"seed"));
+  G={picks:null, mode, box:{}};                            // transient — never clobbers the solo game
+  try{
+    const [a,b]=teams, owner={}, pmap={};
+    teams.forEach(x=>{ if(x.picks) x.picks.forEach(pk=>{ owner[pk.p.n]=x.name; pmap[pk.p.n]=pk.p; }); });
+    const fmt=mode==="wtc"?"Test":"ODI", ORD=["1st","2nd","3rd","4th","5th"];
+    const t={mode, h2h:true, len, a, b, aw:0, bw:0, d:0, fixtures:[], owner, pmap, field:teams};
+    for(let m=0;m<len;m++){
+      const f=tFixture(a,b,mode);                          // wtc fixtures can be drawn — real cricket
+      f.stage = len===1 ? `Once-off ${fmt}` : `${ORD[m]} ${fmt}`;
+      t.fixtures.push(f);
+      if(f.result==="D") t.d++; else if(f.winner===a) t.aw++; else t.bw++;
+    }
+    t.champion = t.aw>t.bw ? a : t.bw>t.aw ? b : null;     // null = series shared / match drawn
+    t.awards=computeAwards();
+    TOURNAMENT=t; return t;
+  } finally { Math.random=_mr; G=prevG; }
 }
 
 /* ===== live lobby (optional, WebRTC via PeerJS) =====
@@ -2104,7 +2145,8 @@ function liveParse(raw){ try{ if(typeof raw!=="string" || raw.length>20000) retu
   const d=JSON.parse(raw); return (d && typeof d.t==="string") ? d : null; }catch(e){ return null; } }
 function liveSend(c,obj){ try{ c.send(JSON.stringify(obj)); }catch(e){} }
 function liveBroadcast(obj){ LIVE.conns.forEach(c=>liveSend(c,obj)); }
-function lobbySnapshot(){ return {mode:T.mode, teams:T.teams.filter(t=>!t.isAI).map(t=>({name:t.name, code:t.code}))}; }
+function lobbySnapshot(){ return {mode:T.mode, kind:T.kind, len:T.len,
+  teams:T.teams.filter(t=>!t.isAI).map(t=>({name:t.name, code:t.code}))}; }
 function liveNewPeer(cb){
   const p=new Peer("pxi-"+Math.random().toString(36).slice(2,11));
   p.on("error", e=>{ if(e && ["network","server-error","socket-error","unavailable-id","browser-incompatible","peer-unavailable"].includes(e.type))
@@ -2165,6 +2207,8 @@ function liveGuestOnData(raw){
 }
 function liveMergeLobby(d, strict){          // strict (GO): the host's field is final — no local extras
   if(d.mode==="wc"||d.mode==="wtc") T.mode=d.mode;
+  if(d.kind==="h2h"||d.kind==="tourney") T.kind=d.kind;
+  if([1,3,5].includes(+d.len)) T.len=+d.len;
   const mine=T.teams.find(t=>t.you);
   const teams=(Array.isArray(d.teams)?d.teams:[]).slice(0,8).map((x,i)=>{
     const code=(""+((x&&x.code)||"")).slice(0,64), name=cleanTeamName(""+((x&&x.name)||""));
@@ -2179,8 +2223,10 @@ function liveMergeLobby(d, strict){          // strict (GO): the host's field is
 }
 function liveRunGo(d){
   liveMergeLobby(d, true);                   // exactly the host's field + the host's seed
-  if(T.teams.length<2) return;
-  runTournament(d.mode==="wtc"?"wtc":"wc", T.teams, ""+(d.seed||""));
+  if(T.teams.length<(d.kind==="h2h"?2:4)) return;
+  const mode=d.mode==="wtc"?"wtc":"wc";
+  if(d.kind==="h2h") runSeries(mode, T.teams.slice(0,2), [1,3,5].includes(+d.len)?+d.len:1, ""+(d.seed||""));
+  else runTournament(mode, T.teams, ""+(d.seed||""));
   renderTournamentResult(); show("tourneyResult");
   startTourneyReveal();
 }
@@ -2194,13 +2240,13 @@ function tourneyTab(name){
 /* ---- tournament reveal: the games unfold in time; head-to-heads get the spotlight ---- */
 let _txTimer=null;
 function clearTxReveal(){ if(_txTimer){ clearTimeout(_txTimer); _txTimer=null; } }
-function isH2H(f){ return !f.a.isAI && !f.b.isAI; }     // both XIs drafted by real people
+function isH2H(f){ return !!(f.a.you || f.b.you); }     // YOUR matches get the spotlight (per viewer)
 function txRowHTML(f, fresh){
-  const h2h=isH2H(f);
+  const h2h=isH2H(f), tag=(TOURNAMENT&&TOURNAMENT.h2h)?"head-to-head":"your match";
   const side=team=>{ const cls="tx-team"+(f.result!=="D"?(f.winner===team?" win":" lose"):"");
     return `<span class="${cls}">${team.flag} ${team.name}</span>`; };
   return `<li class="tx-row${h2h?" tx-h2h":""}${fresh?" rx-new":""}">
-    <span class="tx-tag">${h2h?"⚔ head-to-head · ":""}${f.stage||""}</span>
+    <span class="tx-tag">${h2h?`⚔ ${tag} · `:""}${f.stage||""}</span>
     <div class="tx-face">${side(f.a)}<span class="tx-v">v</span>${side(f.b)}</div>
     <div class="tx-res">${f.line} · ${f.marginText}</div></li>`;
 }
@@ -2252,19 +2298,33 @@ function rivalsHTML(t,h2h){
 }
 function renderTournamentResult(){
   const t=TOURNAMENT; if(!t){ show("home"); return; }
-  $("champBanner").innerHTML=`🏆 ${t.champion.flag} <b>${t.champion.name}</b><div style="font-size:12px;color:var(--dim);font-weight:400;margin-top:4px">${t.mode==="wtc"?"WTC":"World Cup"} Champion</div>`;
+  const sTab=document.querySelector('#resTabs [data-t="standings"]'), bTab=document.querySelector('#resTabs [data-t="bracket"]');
+  if(sTab) sTab.textContent = t.h2h ? (t.len>1?"Series":"Match") : "Standings";
+  if(bTab) bTab.style.display = t.h2h ? "none" : "";
   let st="";
-  if(t.mode==="wc"){
-    const grp=(label,rows)=>`<div class="tgrp">${label}</div><table class="ttbl"><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr>${rows.map(r=>`<tr class="${r.team.isAI?'tai':''}"><td>${r.team.flag} ${r.team.name}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td></tr>`).join("")}</table>`;
-    st=grp("Group A",t.standings.A)+grp("Group B",t.standings.B);
+  if(t.h2h){                                                       // head-to-head: series verdict, not a table
+    const fmt=t.mode==="wtc"?"Test":"ODI", score=`${t.aw}–${t.bw}`+(t.d?` (${t.d} drawn)`:"");
+    $("champBanner").innerHTML = t.champion
+      ? `⚔ ${t.champion.flag} <b>${t.champion.name}</b><div style="font-size:12px;color:var(--dim);font-weight:400;margin-top:4px">${t.len===1?`won the once-off ${fmt}`:`win the ${fmt} series ${score}`} — the better-built XI</div>`
+      : `🤝 <b>${t.len===1?"Match drawn":"Series shared "+score}</b><div style="font-size:12px;color:var(--dim);font-weight:400;margin-top:4px">nothing between these two XIs</div>`;
+    st = `<div class="rivalry-head">⚔ <b>${t.a.flag} ${t.a.name}</b><span class="rscore">${t.aw} – ${t.bw}</span><b>${t.b.name} ${t.b.flag}</b>${t.d?` <span style="color:var(--dim);font-size:12px">(${t.d} drawn)</span>`:""}</div>`
+       + t.fixtures.map(f=>`<div class="bx" style="border-color:var(--gold)"><div class="bxr">${f.stage||""}</div>
+         <div class="bxf"><span class="${f.winner===f.a?'bw':'bl'}">${f.a.flag} ${f.a.name}</span><span class="bvs">v</span><span class="${f.winner===f.b?'bw':'bl'}">${f.b.name} ${f.b.flag}</span></div>
+         <div class="bxs">${f.line} · ${f.marginText}</div></div>`).join("");
+    $("tabBracket").innerHTML="";
   } else {
-    st=`<table class="ttbl"><tr><th>Team</th><th>W</th><th>D</th><th>L</th><th>PCT</th></tr>${t.standings.map(r=>`<tr class="${r.team.isAI?'tai':''}"><td>${r.team.flag} ${r.team.name}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.pct}%</td></tr>`).join("")}</table>`;
+  $("champBanner").innerHTML=`🏆 ${t.champion.flag} <b>${t.champion.name}</b><div style="font-size:12px;color:var(--dim);font-weight:400;margin-top:4px">${t.mode==="wtc"?"WTC":"World Cup"} Champion</div>`;
+  if(t.mode==="wc"){
+    st=`<div class="tgrp">League — top 4 to the semi-finals</div><table class="ttbl"><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr>${t.standings.map(r=>`<tr><td>${r.team.flag} ${r.team.name}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td></tr>`).join("")}</table>`;
+  } else {
+    st=`<table class="ttbl"><tr><th>Team</th><th>W</th><th>D</th><th>L</th><th>PCT</th></tr>${t.standings.map(r=>`<tr><td>${r.team.flag} ${r.team.name}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.pct}%</td></tr>`).join("")}</table>`;
   }
-  $("tabStandings").innerHTML=st;
   $("tabBracket").innerHTML=t.bracket.map(b=>{ const f=b.fx;
     return `<div class="bx"><div class="bxr">${b.round}</div>
       <div class="bxf"><span class="${f.winner===f.a?'bw':'bl'}">${f.a.flag} ${f.a.name}</span><span class="bvs">v</span><span class="${f.winner===f.b?'bw':'bl'}">${f.b.name} ${f.b.flag}</span></div>
       <div class="bxs">${f.line} · ${f.marginText}</div></div>`; }).join("");
+  }
+  $("tabStandings").innerHTML=st;
   const a=t.awards, own=n=>t.owner[n]?` <i>${t.owner[n]}</i>`:"";
   const aw=(ttl,p,v)=> (p&&v!=null&&v!=="")?`<div class="award-row"><div><div class="ttl">${ttl}</div><div class="who">${p.n}${own(p.n)}</div></div><div class="aval">${v}</div></div>`:"";
   $("tabAwards").innerHTML = a ? (
@@ -2274,7 +2334,7 @@ function renderTournamentResult(){
     aw("Most 50s",a.fifties,a.fifties&&a.fifties.fifties)+
     aw("Most 100s",a.hundreds,a.hundreds&&a.hundreds.hundreds)
   ) : "<p style='color:var(--dim)'>No awards.</p>";
-  const h2h=t.fixtures.filter(isH2H);                       // rivalry tab only when friends actually met
+  const h2h=t.h2h?[]:t.fixtures.filter(isH2H);              // rivalry tab only in tournaments (h2h IS the rivalry)
   let rb=document.querySelector('#resTabs [data-t="rivals"]');
   if(h2h.length){
     if(!rb) $("resTabs").insertAdjacentHTML("beforeend",`<button class="tab" data-t="rivals" onclick="tourneyTab('rivals')">⚔ Rivals</button>`);
@@ -2289,9 +2349,10 @@ function importFromHash(){     // a friend opening an invite link lands here -> 
   const pm=(segs.find(x=>/^p=[A-Za-z0-9_-]+$/.test(x))||"").slice(2);   // live-lobby room id
   if(t){ const d=decodeXI(t[1]); T={teams:[], mode:(d.ok?d.mode:"wc"), invited:true, myName:""};
     addCode(t[1]); renderModeSeg(); renderTeams(); syncNameBox(); show("tournament"); return true; }
-  if(g){ const parts=g.slice(2).split(".").filter(Boolean); let mode="wc";
+  if(g){ const parts=g.slice(2).split(".").filter(Boolean); let mode="wc", kind="tourney", len=1;
     if(parts[0]==="wc"||parts[0]==="wtc") mode=parts.shift();      // group links carry the host's format
-    T={teams:[], mode, invited:true, myName:"", hostPeer:(pm||null)};
+    if(/^h2h[135]$/.test(parts[0]||"")){ kind="h2h"; len=+parts[0].slice(3); parts.shift(); }
+    T={teams:[], mode, kind, len, invited:true, myName:"", hostPeer:(pm||null)};
     parts.forEach(c=>addCode(c,null,true));
     renderModeSeg(); renderTeams(); syncNameBox(); show("tournament");
     if(pm) liveJoin(pm);                                           // connect to the host's live lobby

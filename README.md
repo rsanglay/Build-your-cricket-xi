@@ -61,9 +61,14 @@ nonsense side. The defaults reproduce the game's original fixed shapes exactly.
 Each player names their team and drafts their own XI; a short **code** (about 20
 characters) carries the whole team — there is no game server.
 
-- **Host a lobby:** open the Tournament screen, **name your team** (e.g. *Raazik's
-  Royals*), draft your XI, then **Copy invite link** and send it on WhatsApp/anywhere.
-  The lobby shows a *waiting for friends* state until at least two real teams are in.
+- **Two ways to play friends:** a 🏆 **Tournament** — **real players only, 4 to 8 teams,
+  no AI fillers** — or ⚔ **Head-to-Head** — just your XI against one rival's, as a
+  **once-off ODI**, a **once-off Test**, or a **3- or 5-match series**. Most wins takes
+  the series (Tests can be drawn; a level series is shared) and the banner names **the
+  better-built XI**.
+- **Host a lobby:** open the Play friends screen, pick the game, **name your team**
+  (e.g. *Raazik's Royals*), draft your XI, then **Copy invite link** and send it on
+  WhatsApp/anywhere. The lobby waits until your friends (or rival) are in.
 - **Live lobby:** the link carries a room id — friends' browsers connect **directly to
   yours** (WebRTC via PeerJS; the free broker only does the introduction and never sees
   your teams). As each friend names their team and finishes drafting, **they appear in
@@ -77,10 +82,11 @@ characters) carries the whole team — there is no game server.
 - **Head-to-head spotlight:** any fixture between two real people gets a gold **⚔
   HEAD-TO-HEAD** card and extra suspense in the feed, plus a **Rivals** tab at the end
   with your win–loss ledger against each friend.
-- **The tournament:** up to **8 teams (88 players)**; empty seats are filled with AI sides.
-  The host picks **World Cup** (group + knockout) or **WTC** (points table + final). It plays
-  through the same match engine, and the results screen shows **standings, the knockout
-  bracket, and tournament-wide awards** (a friend's player can win the Golden Bat).
+- **The tournament:** **4–8 real teams (44–88 players), no AI**. The host picks
+  **World Cup** (everyone in one league, top 4 to the semi-finals, then the final) or
+  **WTC** (points table + final). It plays through the same match engine, and the results
+  screen shows **standings, the knockout bracket, and tournament-wide awards** (a friend's
+  player can win the Golden Bat).
 - It's **deterministic**: the same set of codes always produces the same tournament, so
   everyone who runs them sees the same champion. (Team names ride along in the link as
   `Name~code` but never affect the result.)
