@@ -269,6 +269,8 @@
   .team-row .tcp{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;flex:none;padding:0 2px}
   .team-row .trm{background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;flex:none;padding:0 4px}
   .invite-box{margin-top:14px;padding:14px;border:1px dashed var(--green);border-radius:12px;background:var(--panel2)}
+  .invite-banner{padding:12px 14px;border:1px solid var(--green);border-radius:10px;background:linear-gradient(135deg,#16412b,#0f2a1c);color:var(--ink);font-size:13px;line-height:1.5;margin-bottom:12px}
+  .invite-banner b{color:var(--green)}
   .champ-banner{text-align:center;font-size:22px;font-weight:800;color:var(--gold);background:linear-gradient(180deg,#16271d,var(--bg));border:1px solid var(--gold);border-radius:14px;padding:18px;margin-bottom:14px}
   .tabs{display:flex;gap:6px;margin-bottom:12px}
   .tabs .tab{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:10px;padding:9px;font-weight:600;font-size:13px}
@@ -484,17 +486,18 @@
   <!-- TOURNAMENT -->
   <section id="tournament" class="scr">
     <div class="brand"><h1 style="font-size:32px">Tournament</h1>
-      <p>Pick a format and add up to 8 teams (88 players). No XI yet? Generate one. Empty seats are filled with AI teams.</p></div>
+      <p>Pick a format, draft your XI, then invite friends with a link. Up to 8 teams (88 players); empty seats are filled with AI teams.</p></div>
     <div class="stage">
+      <div id="inviteBanner" class="invite-banner" style="display:none"></div>
       <div class="seg" id="tMode">
         <button class="segbtn on" data-m="wc" onclick="setTourneyMode('wc')">World Cup</button>
         <button class="segbtn" data-m="wtc" onclick="setTourneyMode('wtc')">WTC</button>
       </div>
-      <div class="row" style="gap:8px;margin-top:12px">
-        <input id="codeBox" class="codefield" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a friend's XI code or link…">
-        <button class="btn" onclick="addCodeFromBox()">Add</button>
+      <button class="btn" style="width:100%;margin-top:12px" onclick="startDraftForTournament()">🏏 Draft your XI to join</button>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <input id="codeBox" class="codefield" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="…or paste a friend's code / link">
+        <button class="btn ghost" onclick="addCodeFromBox()">Add</button>
       </div>
-      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="addRandomXI()">🎲 Generate an XI for me</button>
       <div id="codeError" class="code-error"></div>
       <ul id="teamList" class="team-list"></ul>
       <button class="btn" id="btnRunTourney" style="width:100%" disabled onclick="runTourneyFromTeams()">Add at least 2 teams</button>
@@ -1014,6 +1017,7 @@ function fit(player, slotRole){ return Math.max(0, ...player.r.map(role=>pairFit
 
 /* ---- game state ---- */
 let G = null;
+let DRAFT_FOR_TOURNEY=false;            // true while drafting an XI to JOIN a tournament (vs a solo campaign)
 const $ = id => document.getElementById(id);
 
 /* ---- navigation / hash router (browser back & forward work) ---- */
@@ -1056,7 +1060,8 @@ window.addEventListener("keydown", e=>{ if(e.key==="Escape" && currentScreen()!=
 function rating(p){ return G.mode==="wtc" ? p.test : p.odi; }
 function eligible(p){ return rating(p)!=null && rating(p)>0; }
 
-function start(mode){
+function start(mode, forTourney){
+  DRAFT_FOR_TOURNEY = !!forTourney;
   const makeup = {...MK_DEFAULT[mode]};
   G = {mode, diff:"classic", makeup, shape:buildShape(mode, makeup),
        picks:new Array(11).fill(null), used:new Set(), rerolls:3, round:0, offer:null};
@@ -1170,7 +1175,7 @@ function spin(){
 }
 
 function nextRound(){
-  if(G.round>=11){ simulate(); return; }
+  if(G.round>=11){ if(DRAFT_FOR_TOURNEY) joinTournamentWithMyXI(); else simulate(); return; }
   renderRail();
   updateCrumb();
   G.offer = spin();
@@ -1904,7 +1909,7 @@ async function shareImage(){
 
 function copyResult(){ navigator.clipboard?.writeText(G._share).then(()=>toast("copied to clipboard"),()=>toast("copy failed")); }
 function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),1500); }
-function resetGame(){ G=null; route("home"); }
+function resetGame(){ DRAFT_FOR_TOURNEY=false; G=null; route("home"); }
 
 /* ---- tournament UX: build a field from pasted codes, run it, render ---- */
 let T={teams:[], mode:"wc"};                              // max 8 teams (88 players)
@@ -1915,25 +1920,27 @@ function setTourneyMode(m){ T.mode=m;
   renderModeSeg(); renderTeams(); }
 function renderModeSeg(){ const el=$("tMode"); if(!el) return;
   el.querySelectorAll(".segbtn").forEach(b=> b.classList.toggle("on", b.getAttribute("data-m")===T.mode)); }
-function makeRandomPicks(mode){
-  const shape=SHAPES[mode], fmt=mode==="wtc"?"test":"odi", used=new Set(), picks=[];
-  for(const role of shape){
-    const cands=DB.filter(p=>p[fmt]!=null && p[fmt]>0 && !used.has(p.n) && fit(p,role)>=0.6);
-    const p=cands[Math.floor(Math.random()*cands.length)] || DB.find(p=>p[fmt]!=null && !used.has(p.n));
-    used.add(p.n); picks.push({p, f:fit(p,role)});
-  }
-  picks._mode=mode; picks._shape=shape; return picks;
+function startDraftForTournament(){      // go draft an XI (in the tournament's format) to join with
+  if(T.teams.length>=8){ $("codeError").textContent="Tournament is full (8 teams)."; return; }
+  start(T.mode, true);                   // setup -> make-up -> draft; nextRound routes to join at pick 11
 }
-function addRandomXI(){
-  const err=$("codeError"); err.textContent="";
-  if(T.teams.length>=8){ err.textContent="Tournament is full (8 teams)."; return; }
-  const picks=makeRandomPicks(T.mode), players=picks.map(pk=>pk.p), code=encodeXI(T.mode, players);
-  if(T.teams.some(t=>t.code===code)){ err.textContent="That random XI is already in — try again."; return; }
-  T.teams.push({id:"r"+T.teams.length, code, mode:T.mode, picks, players, shape:picks._shape,
-    name:teamNameFor(picks)+" 🎲", flag:(FLAG[picks[0].p.c]||"🎲"), strength:Math.round(strengthOf(picks,T.mode)), isAI:false});
-  renderTeams();
+function joinTournamentWithMyXI(){       // called when a tournament-draft fills its 11th pick
+  DRAFT_FOR_TOURNEY=false;
+  const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; picks._shape=G.shape;
+  T.teams=T.teams.filter(t=>!t.you);     // replace any previous "your XI"
+  T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
+    players:G.picks.map(p=>p.p), name:"Your XI", flag:"⭐", strength:Math.round(teamStrength()), isAI:false, you:true});
+  renderModeSeg(); renderTeams(); show("tournament");
+}
+function renderInviteBanner(){
+  const b=$("inviteBanner"); if(!b) return;
+  if(T.invited){ const n=T.teams.filter(t=>!t.isAI).length;
+    b.innerHTML=`🎟️ You've been invited to a <b>${T.mode==="wtc"?"WTC":"World Cup"}</b> tournament${n?` with ${n} team${n>1?"s":""} already in`:""}. Draft your XI to join.`;
+    b.style.display="block"; }
+  else b.style.display="none";
 }
 function openTournament(){
+  T.invited=false;                                                         // host path (not an invite)
   if(!T.teams.some(t=>t.you) && G && G.picks && G.picks.every(Boolean)){     // seed YOUR drafted XI
     const picks=G.picks.map(pk=>({p:pk.p,f:pk.f})); picks._mode=G.mode; picks._shape=G.shape; T.mode=G.mode;
     T.teams.unshift({id:"you", code:encodeXI(G.mode,G.picks.map(p=>p.p),G.makeup), mode:G.mode, picks, shape:G.shape,
@@ -1964,10 +1971,10 @@ function renderTeams(){
     ${t.you?'<span class="tyou">YOU</span>':''}<span class="tstr">${t.strength}</span>
     <button class="tcp" onclick="copyTeamCode(${i})" title="copy this XI's code to send">📋</button>
     ${t.you?'':`<button class="trm" onclick="removeTeam(${i})" aria-label="remove">×</button>`}</li>`).join("")
-    : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — paste a code, or generate one below.</li>`;
+    : `<li class="team-row" style="color:var(--dim);justify-content:center">No teams yet — draft your XI above, or paste a friend's code.</li>`;
   const btn=$("btnRunTourney"); btn.disabled=real<2;
   btn.textContent = real<2 ? "Add at least 2 teams" : `Run tournament — ${real} real${T.teams.length<8?` + ${8-T.teams.length} AI`:""}`;
-  refreshInvite();
+  refreshInvite(); renderInviteBanner();
 }
 function copyTeamCode(i){ const t=T.teams[i]; if(t&&t.code) navigator.clipboard?.writeText(t.code).then(()=>toast("XI code copied — send it to a friend"),()=>toast("copy failed")); }
 function refreshInvite(){
@@ -2015,13 +2022,14 @@ function renderTournamentResult(){
   ) : "<p style='color:var(--dim)'>No awards.</p>";
   tourneyTab("standings");
 }
-function importFromHash(){
+function importFromHash(){     // a friend opening an invite link lands here -> tournament lobby, then they draft to join
   const h=(location.hash||"").slice(1);
   const t=h.match(/^t=([A-Za-z0-9_-]+)/), g=h.match(/^g=([A-Za-z0-9_.\-]+)/);
-  if(t){ addCode(t[1]); openTournament(); return true; }
+  if(t){ const d=decodeXI(t[1]); T={teams:[], mode:(d.ok?d.mode:"wc"), invited:true};
+    addCode(t[1]); renderModeSeg(); renderTeams(); show("tournament"); return true; }
   if(g){ const parts=g[1].split(".").filter(Boolean); let mode="wc";
     if(parts[0]==="wc"||parts[0]==="wtc") mode=parts.shift();      // group links carry the host's format
-    T={teams:[], mode}; parts.forEach(c=>addCode(c)); openTournament(); return true; }
+    T={teams:[], mode, invited:true}; parts.forEach(c=>addCode(c)); renderModeSeg(); renderTeams(); show("tournament"); return true; }
   return false;
 }
 
