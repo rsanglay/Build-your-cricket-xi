@@ -166,6 +166,8 @@
     .ladder.reveal .rung,.ladder.reveal .seam{animation:none;opacity:1;transform:none}
     .spin .draw.land{animation:none} .pip.just{animation:none}
   }
+  .verdict.in{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+  .rx-row.rx-new{animation:rungin .3s ease}
 
   /* ---- match results list + awards (Phase 1.5) ---- */
   .rx-results{margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
@@ -295,6 +297,9 @@
       <div class="record" id="rRecord"></div>
       <div class="sub" id="rSub"></div>
       <div class="grid-emoji" id="rGrid"></div>
+      <div class="row" id="rSkip" style="display:none;justify-content:center">
+        <button class="btn ghost" onclick="finishReveal()">skip to result ›</button>
+      </div>
       <div class="row" style="justify-content:center">
         <button class="btn" onclick="shareImage()">📤 share image</button>
         <button class="btn ghost" onclick="copyResult()">📋 copy text</button>
@@ -753,6 +758,7 @@ function crumbFor(id){
 }
 function updateCrumb(){ $("crumb").textContent = crumbFor(currentScreen()); }
 function route(id, push=true){
+  clearReveal();                                              // stop any game-by-game reveal in flight
   if((id==="setup"||id==="draft") && !G) id="home";          // guard deep-links / stale forward
   if(id==="result" && !(G && G._share)) id="home";
   document.querySelectorAll(".scr").forEach(x=>x.classList.remove("on"));
@@ -1081,17 +1087,57 @@ function scoreCells(sc){
     return sc.weBatFirst ? `${us} – ${op}` : `${op} – ${us}`; }
   return `${sc.usInns.join(" & ")} v ${sc.oppInns.join(" & ")}`;
 }
-function renderResultExtras(){
-  const c=G._card;
-  $("rxList").innerHTML=(c.results||[]).map(g=>{
-    const cls=g.result==="W"?"rx-win":g.result==="L"?"rx-loss":"rx-draw";
-    return `<li class="rx-row ${cls}">
+function rxRowHTML(g, fresh){
+  const cls=g.result==="W"?"rx-win":g.result==="L"?"rx-loss":"rx-draw";
+  return `<li class="rx-row ${cls}${fresh?" rx-new":""}">
       <div class="rx-meta"><span class="rx-tag">${g.stage}</span>
         <span class="rx-opp">v ${g.oppName} <i>${g.oppRating}</i></span></div>
       <div class="rx-score">${scoreCells(g.sc)}</div>
-      <div class="rx-margin">${g.sc.marginText}</div></li>`; }).join("");
+      <div class="rx-margin">${g.sc.marginText}</div></li>`;
+}
+function renderResultExtras(){
+  const c=G._card;
+  $("rxList").innerHTML=(c.results||[]).map(g=>rxRowHTML(g,false)).join("");
   $("rxRec").textContent=c.record;
   $("rxAwards").innerHTML = c.awards ? awardsHTML(c.awards) : "";
+}
+
+/* game-by-game reveal: play the campaign out match by match, then land the verdict + awards.
+   Reusable — the multiplayer tournament will drive the same row-reveal for its fixtures. */
+let _revTimer=null;
+function clearReveal(){ if(_revTimer){ clearTimeout(_revTimer); _revTimer=null; } }
+function startReveal(){
+  clearReveal();
+  const c=G._card, games=c.results||[];
+  $("rxList").innerHTML=""; $("rxAwards").innerHTML=""; $("rxRec").textContent="";
+  $("rVerdict").className="verdict v-out"; $("rVerdict").textContent=games.length?"Simulating…":"";
+  $("rRecord").textContent=""; $("rSub").innerHTML=""; $("rGrid").textContent="";
+  if(!games.length){ finishReveal(); return; }
+  $("rSkip").style.display="flex";
+  let i=0,w=0,l=0,d=0,grid="";
+  const delay=clamp(Math.round(4200/games.length),110,420);   // whole reveal ~5s max, even a 22-Test cycle
+  (function step(){
+    const g=games[i];
+    $("rxList").insertAdjacentHTML("beforeend", rxRowHTML(g,true));
+    if(g.result==="W")w++; else if(g.result==="L")l++; else d++;
+    grid += g.result==="W"?"🟩":g.result==="D"?"⬜":"🟥";
+    $("rGrid").textContent=grid;
+    $("rRecord").textContent = c.mode==="wtc" ? `${w}–${d}–${l}` : `${w}–${l}`;
+    i++;
+    if(i<games.length) _revTimer=setTimeout(step, delay);
+    else _revTimer=setTimeout(finishReveal, 450);
+  })();
+}
+function finishReveal(){
+  clearReveal();
+  const c=G._card; if(!c) return;
+  $("rSkip").style.display="none";
+  $("rVerdict").className="verdict "+c.vclass; $("rVerdict").textContent=c.verdict;
+  void $("rVerdict").offsetWidth; $("rVerdict").classList.add("in");   // pop the verdict
+  $("rRecord").textContent=c.record;
+  $("rSub").innerHTML=c._sub||"";
+  $("rGrid").textContent=c._grid||"";
+  renderResultExtras();                                                // full list + awards + record
 }
 function awardsHTML(a){
   const card=(k,p,v)=> p?`<div class="rx-award"><span class="rx-k">${k}</span>
@@ -1109,16 +1155,13 @@ function awardsHTML(a){
 }
 
 function setResult(verdict,vclass,record,sub,grid,team,tiles){
-  $("rVerdict").className="verdict "+vclass; $("rVerdict").textContent=verdict;
-  $("rRecord").textContent=record;
-  $("rSub").innerHTML=sub;
-  $("rGrid").textContent=grid;
   $("rStrength").textContent=team.toFixed(1);
-  renderXI("rXi", true);                 // reveal everything in Expert
+  renderXI("rXi", true);                 // your XI — fine to show during the reveal
   renderBalance("balanceBox");
   const mode = G.mode==="wtc" ? "World Test Championship" : "World Cup";
   G._share = `THE PERFECT XI — ${mode}\n${record}  ${verdict}\n${grid}\nBuild yours: (the-perfect-xi)`;
   G._card = { mode:G.mode, verdict, vclass, record, team, tiles:tiles||[],
+              _grid:grid, _sub:sub,
               seam: seamIndex(), balance: computeBalance(),
               results: G._gamesPending||[], awards: computeAwards(),
               xi: G.shape.map((r,i)=>{ const p=G.picks[i].p; return {
@@ -1127,8 +1170,8 @@ function setResult(verdict,vclass,record,sub,grid,team,tiles){
                 bowl:(r==="PACE"?"pace":r==="SPIN"?"spin":null),
                 keep:r==="KEEP", ar:r==="AR" }; }) };
   G._gamesPending=null;
-  renderResultExtras();
   show("result");
+  startReveal();                         // play the campaign out game by game
 }
 
 function simulate(){
