@@ -166,6 +166,38 @@
     .ladder.reveal .rung,.ladder.reveal .seam{animation:none;opacity:1;transform:none}
     .spin .draw.land{animation:none} .pip.just{animation:none}
   }
+
+  /* ---- match results list + awards (Phase 1.5) ---- */
+  .rx-results{margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+  .rx-results>summary{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;list-style:none;font-size:14px;font-weight:700}
+  .rx-results>summary::-webkit-details-marker{display:none}
+  .rx-results>summary::after{content:"▸";color:var(--dim);transition:transform .2s}
+  .rx-results[open]>summary::after{transform:rotate(90deg)}
+  .rx-rec{font-family:var(--mono);font-size:12px;color:var(--dim);font-weight:500}
+  .rx-list{margin:0;padding:0;list-style:none}
+  .rx-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"meta score" "meta margin";gap:1px 12px;padding:9px 14px;border-top:1px solid var(--line);align-items:center;border-left:3px solid transparent}
+  .rx-win{border-left-color:var(--green)} .rx-loss{border-left-color:var(--red)} .rx-draw{border-left-color:var(--gold)}
+  .rx-meta{grid-area:meta;min-width:0}
+  .rx-tag{display:block;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+  .rx-opp{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rx-opp i{font-style:normal;font-size:11px;color:var(--dim);margin-left:4px}
+  .rx-score{grid-area:score;font-family:var(--mono);font-size:13px;text-align:right;color:var(--ink)}
+  .rx-margin{grid-area:margin;font-family:var(--mono);font-size:11px;text-align:right;font-weight:600}
+  .rx-win .rx-margin{color:var(--green)} .rx-loss .rx-margin{color:var(--red)} .rx-draw .rx-margin{color:var(--gold)}
+  .rx-awards{margin:0}
+  .rx-h{font-size:14px;font-weight:700;margin:0 0 10px}
+  .rx-potm{display:flex;flex-direction:column;gap:3px;padding:14px;border-radius:12px;
+           background:linear-gradient(135deg,#16412b,#0f2a1c);border:1px solid var(--green);margin-bottom:10px}
+  .rx-award-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--green)}
+  .rx-award-name{font-size:18px;font-weight:800;color:#fff}
+  .rx-award-name i,.rx-award b i{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:6px;border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  .rx-award-stat{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .rx-award-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(max-width:380px){.rx-award-grid{grid-template-columns:1fr}}
+  .rx-award{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+  .rx-k{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+  .rx-award b{font-size:14px;font-weight:700}
+  .rx-v{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--green)}
 </style>
 </head>
 <body>
@@ -268,6 +300,13 @@
         <button class="btn ghost" onclick="copyResult()">📋 copy text</button>
         <button class="btn ghost" onclick="resetGame()">play again</button>
       </div>
+    </div>
+    <div class="stage">
+      <details class="rx-results" open>
+        <summary><span class="rx-h" style="margin:0">Match results</span><span class="rx-rec" id="rxRec"></span></summary>
+        <ol class="rx-list" id="rxList"></ol>
+      </details>
+      <section class="rx-awards" id="rxAwards"></section>
     </div>
     <div class="stage">
       <div class="bar" style="margin:0 0 8px"><strong style="font-size:14px">FINAL XI</strong>
@@ -917,6 +956,158 @@ function winProb(team, opp){ return 1/(1+Math.pow(10,(opp-team)/12)); }
 function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
 function randNorm(){ return (Math.random()+Math.random()+Math.random()-1.5)/1.5; } // bounded ~N(0,1)
 
+/* ===== match engine — back-fills a realistic scoreline/box-score onto the ALREADY-DECIDED
+   W/D/L. winProb (and the WTC x<w?W:D:L line) stays the SOLE outcome decider; nothing below
+   ever feeds back into a branch that sets the result, so the documented odds are untouched. ===== */
+const sum = a => a.reduce((s,x)=>s+x,0);
+function gauss(mean,sd){ return mean + randNorm()*sd; }
+function ri(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+function toss(){ return Math.random()<0.5; }                 // true = we bat first (phrasing only)
+function largestRemainder(raw, total){                       // integer split summing EXACTLY to total
+  const fl=raw.map(Math.floor); let rem=total-sum(fl);
+  const order=raw.map((v,i)=>({i,frac:v-Math.floor(v)})).sort((a,b)=>b.frac-a.frac);
+  for(let k=0;k<order.length&&rem>0;k++){ fl[order[k].i]++; rem--; }
+  return fl;
+}
+function battingStrength(){ let s=0,n=0; G.picks.forEach((sl,i)=>{ const r=G.shape[i];
+  if(sl && r!=="PACE" && r!=="SPIN"){ s+=rating(sl.p)*sl.f; n++; } }); return n? s/n : 60; }
+function bowlingStrength(){ let s=0,n=0; G.picks.forEach((sl,i)=>{ const r=G.shape[i];
+  if(sl && (r==="PACE"||r==="SPIN"||r==="AR")){ s+=rating(sl.p)*sl.f; n++; } }); return n? s/n : 60; }
+function chaseWkts(){ return clamp(Math.round(gauss(5,2)),1,9); }      // a successful chaser, never 10
+function batFirstWkts(){ return clamp(Math.round(gauss(7,1.8)),4,10); }
+
+/* opponent flavour names (anonymous rated teams get a nation label) */
+const OPP_NATIONS=["Australia","India","England","Pakistan","South Africa","New Zealand","Sri Lanka","West Indies","Bangladesh","Afghanistan","Ireland","Zimbabwe"];
+function nameOpponents(n){ const pool=[...OPP_NATIONS], out=[];
+  for(let i=0;i<n;i++){ if(!pool.length) pool.push(...OPP_NATIONS);
+    out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); } return out; }
+
+/* ---- ODI scoreline (no draw / no tie in this sim) ---- */
+function odiTotal(batStr){ return Math.round(clamp(gauss(250+(batStr-77)*2.4,22),90,430)); }
+function oppOdiTotal(opp,bowlStr){ const eff=opp-(bowlStr-77)*0.45; return Math.round(clamp(gauss(248+(eff-75)*2.4,24),80,420)); }
+function odiMarginText(result,by,margin){ const v=result==="W"?"won":"lost"; return by==="runs"?`${v} by ${margin} runs`:`${v} by ${margin} wkts`; }
+function odiScore(result,opp){
+  const batStr=battingStrength(), bowlStr=bowlingStrength(), weBatFirst=toss(), weWin=(result==="W");
+  let our,ourW,opp_,oppW,by,margin,wk;
+  if(weBatFirst){
+    our=odiTotal(batStr); ourW=batFirstWkts();
+    if(weWin){ opp_=clamp(Math.min(oppOdiTotal(opp,bowlStr),our-1),Math.max(40,our-120),our-1); oppW=10; by="runs"; margin=our-opp_; }   // we defend
+    else { wk=chaseWkts(); opp_=our+ri(1,8); oppW=wk; by="wkts"; margin=10-wk; }                                                        // opp chases us down
+  } else {
+    opp_=oppOdiTotal(opp,bowlStr); const oppFirstW=batFirstWkts();
+    if(weWin){ wk=chaseWkts(); our=opp_+ri(1,8); ourW=wk; oppW=oppFirstW; by="wkts"; margin=10-wk; }                                     // we chase home
+    else { our=clamp(Math.min(odiTotal(batStr),opp_-1),Math.max(40,opp_-120),opp_-1); ourW=10; oppW=oppFirstW; by="runs"; margin=opp_-our; } // we bat last, fall short
+  }
+  return {fmt:"odi",weBatFirst,our,ourW,opp:opp_,oppW,result,by,margin,marginText:odiMarginText(result,by,margin),
+          ourBat:allocRuns(our), ourBowl:allocWickets(oppW)};
+}
+
+/* ---- Test scoreline (adds the DRAW + innings-victory shapes) ---- */
+const tBat = batStr => Math.round(clamp(gauss(330+(batStr-77)*3,70),90,620));
+const tOpp = (opp,bowlStr) => Math.round(clamp(gauss(325+(opp-75)*3-(bowlStr-77)*0.6,75),80,600));
+function testScore(result,opp){
+  const batStr=battingStrength(), bowlStr=bowlingStrength(), weBatFirst=toss();
+  if(result==="D"){                                          // draw: time out, scores unequal, no margin
+    const oA=tBat(batStr),eA=tOpp(opp,bowlStr),oB=tBat(batStr),eB=tOpp(opp,bowlStr);
+    return {fmt:"test",weBatFirst,usInns:[oA,oB],oppInns:[eA,eB],result:"D",by:"draw",marginText:"match drawn",
+            ourBat:[allocRuns(oA),allocRuns(oB)], ourBowl:allocWickets(clamp(Math.round(gauss(7,2)),3,10))};
+  }
+  const weWin=(result==="W"), gap=Math.abs(batStr-opp), winnerStr=weWin?batStr:opp;
+  if(gap>10 && Math.random()<clamp(0.10+gap*0.012,0,0.32)){  // innings victory (real strength gap only)
+    const wBig=Math.round(clamp(gauss(480+(winnerStr-77)*3,60),320,680));
+    let l1=Math.round(clamp(gauss(190,40),70,300)), l2=Math.round(clamp(gauss(190,40),70,300));
+    const cap=wBig-ri(12,80); if(l1+l2>cap){ const k=cap/(l1+l2); l1=Math.max(40,Math.round(l1*k)); l2=Math.max(30,Math.round(l2*k)); }
+    const margin=Math.max(1,wBig-(l1+l2)), usInns=weWin?[wBig]:[l1,l2], oppInns=weWin?[l1,l2]:[wBig];
+    return {fmt:"test",weBatFirst,usInns,oppInns,result,by:"innings",margin,
+            marginText:`${weWin?"won":"lost"} by an innings & ${margin} runs`,
+            ourBat:usInns.map(t=>allocRuns(t)), ourBowl:allocWickets(weWin?20:clamp(Math.round(gauss(8,1.5)),5,10))};
+  }
+  // standard 4-innings: A bats first, B bats last; winner fixed by result, who-bats-last is free
+  const aStr=weBatFirst?batStr:opp, bStr=weBatFirst?opp:batStr;
+  const A1=Math.round(clamp(gauss(330+(aStr-77)*3,70),90,620));
+  const B1=Math.round(clamp(gauss(325+(bStr-77)*3,75),80,600));
+  const A2=Math.round(clamp(gauss(310+(aStr-77)*3,70),80,600));
+  const target=Math.max(20,(A1+A2)-B1+1), bIsUs=!weBatFirst, bWins=(bIsUs===weWin);
+  let B2,by,margin,wk;
+  if(bWins){ wk=chaseWkts(); B2=target; by="wkts"; margin=10-wk; }                                     // B chases home
+  else { B2=clamp(Math.round(gauss(target*0.6,50)),1,target-1); by="runs"; margin=target-B2; }          // B bowled out short, A defends
+  const usInns=weBatFirst?[A1,A2]:[B1,B2], oppInns=weBatFirst?[B1,B2]:[A1,A2];
+  const oppFell = weWin ? 20 : (by==="wkts" ? 10+(wk||4) : clamp(Math.round(gauss(12,3)),7,18));
+  return {fmt:"test",weBatFirst,usInns,oppInns,result,by,margin,
+          marginText:`${weWin?"won":"lost"} by ${margin} ${by==="runs"?"runs":"wkts"}`,
+          ourBat:usInns.map(t=>allocRuns(t)), ourBowl:allocWickets(clamp(oppFell,1,20))};
+}
+
+/* ---- per-player box attribution: split each innings by role x order x noise, integer-summing to the total ---- */
+const ORDER_DECAY=[1.0,1.0,0.95,0.9,0.85,0.8,0.7,0.6,0.35,0.3,0.25];
+function batWeights(){ return G.picks.map((sl,i)=>{ if(!sl) return 0; const r=G.shape[i];
+  const isBat=!(r==="PACE"||r==="SPIN"), base=rating(sl.p)*sl.f*(ORDER_DECAY[i]||0.25); return isBat?base:base*0.18; }); }
+function bowlWeights(){ return G.picks.map((sl,i)=>{ if(!sl) return 0; const r=G.shape[i];
+  if(r==="PACE"||r==="SPIN") return rating(sl.p)*sl.f; if(r==="AR") return rating(sl.p)*sl.f*0.6; return 0; }); }
+function allocRuns(T){ const w=batWeights(), wt=sum(w)||1;
+  let raw=w.map(x=>T*(x/wt)*clamp(gauss(1,0.55),0,3)); const s=sum(raw)||1; raw=raw.map(x=>x*T/s);
+  return largestRemainder(raw,T).map((runs,i)=>({i,runs})); }
+function allocWickets(W){ const w=bowlWeights(), wt=sum(w)||1;
+  let raw=w.map(x=>W*(x/wt)*clamp(gauss(1,0.6),0,3)); const s=sum(raw)||1; raw=raw.map(x=>x*W/s);
+  return largestRemainder(raw,W).map((wkts,i)=>({i,wkts})); }
+
+/* ---- campaign accumulator + awards ---- */
+function resetBox(){ G.box={}; }
+function ent(name){ return (G.box[name] ||= {runs:0,wkts:0,fifties:0,hundreds:0,mat:0}); }
+function accrue(sc){
+  const inns = Array.isArray(sc.ourBat[0]) ? sc.ourBat : [sc.ourBat];
+  const seen=new Set();
+  inns.forEach(inn=>inn.forEach(b=>{ const p=G.picks[b.i].p, e=ent(p.n); e.runs+=b.runs;
+    if(b.runs>=100) e.hundreds++; else if(b.runs>=50) e.fifties++; seen.add(p.n); }));   // a 100 is not also a 50
+  const bowlInns = Array.isArray(sc.ourBowl[0]) ? sc.ourBowl : [sc.ourBowl];
+  bowlInns.forEach(inn=>inn.forEach(b=>{ if(b.wkts>0){ ent(G.picks[b.i].p.n).wkts+=b.wkts; seen.add(G.picks[b.i].p.n); } }));
+  seen.forEach(n=>ent(n).mat++);
+}
+function findPlayer(n){ const sl=G.picks.find(s=>s&&s.p.n===n); return sl?sl.p:null; }
+function computeAwards(){
+  const arr=Object.entries(G.box||{}).map(([n,s])=>{ const p=findPlayer(n);
+    return {n,...s, abbr:p?(NAT_ABBR[p.c]||p.c):"", stripe:p?(STRIPE[p.c]||"#26402f"):"#26402f"}; });
+  if(!arr.length) return null;
+  const top=k=>arr.slice().sort((a,b)=>b[k]-a[k]||b.runs-a.runs)[0];
+  return { runs:top("runs"), wkts:top("wkts"),
+    fifties: arr.some(x=>x.fifties>0)?top("fifties"):null,
+    hundreds: arr.some(x=>x.hundreds>0)?top("hundreds"):null,
+    potm: arr.slice().sort((a,b)=>(b.runs+20*b.wkts)-(a.runs+20*a.wkts))[0] };   // composite: runs + 20*wkts
+}
+
+/* ---- results-list + awards rendering ---- */
+function scoreCells(sc){
+  if(sc.fmt==="odi"){ const us=`${sc.our}/${sc.ourW}`, op=`${sc.opp}/${sc.oppW}`;
+    return sc.weBatFirst ? `${us} – ${op}` : `${op} – ${us}`; }
+  return `${sc.usInns.join(" & ")} v ${sc.oppInns.join(" & ")}`;
+}
+function renderResultExtras(){
+  const c=G._card;
+  $("rxList").innerHTML=(c.results||[]).map(g=>{
+    const cls=g.result==="W"?"rx-win":g.result==="L"?"rx-loss":"rx-draw";
+    return `<li class="rx-row ${cls}">
+      <div class="rx-meta"><span class="rx-tag">${g.stage}</span>
+        <span class="rx-opp">v ${g.oppName} <i>${g.oppRating}</i></span></div>
+      <div class="rx-score">${scoreCells(g.sc)}</div>
+      <div class="rx-margin">${g.sc.marginText}</div></li>`; }).join("");
+  $("rxRec").textContent=c.record;
+  $("rxAwards").innerHTML = c.awards ? awardsHTML(c.awards) : "";
+}
+function awardsHTML(a){
+  const card=(k,p,v)=> p?`<div class="rx-award"><span class="rx-k">${k}</span>
+     <b>${p.n} <i>${p.abbr}</i></b><span class="rx-v">${v}</span></div>`:"";
+  return `<h3 class="rx-h">🏆 Tournament Awards</h3>
+   <div class="rx-potm"><span class="rx-award-label">Player of the Tournament</span>
+     <span class="rx-award-name">${a.potm.n} <i>${a.potm.abbr}</i></span>
+     <span class="rx-award-stat">${a.potm.runs} runs · ${a.potm.wkts} wkts${a.potm.hundreds?` · ${a.potm.hundreds}×100`:""}</span></div>
+   <div class="rx-award-grid">
+     ${card("Most Runs",a.runs,a.runs.runs)}
+     ${card("Most Wickets",a.wkts,a.wkts.wkts)}
+     ${card("Most 50s",a.fifties,a.fifties&&a.fifties.fifties)}
+     ${card("Most 100s",a.hundreds,a.hundreds&&a.hundreds.hundreds)}
+   </div>`;
+}
+
 function setResult(verdict,vclass,record,sub,grid,team,tiles){
   $("rVerdict").className="verdict "+vclass; $("rVerdict").textContent=verdict;
   $("rRecord").textContent=record;
@@ -929,11 +1120,14 @@ function setResult(verdict,vclass,record,sub,grid,team,tiles){
   G._share = `THE PERFECT XI — ${mode}\n${record}  ${verdict}\n${grid}\nBuild yours: (the-perfect-xi)`;
   G._card = { mode:G.mode, verdict, vclass, record, team, tiles:tiles||[],
               seam: seamIndex(), balance: computeBalance(),
+              results: G._gamesPending||[], awards: computeAwards(),
               xi: G.shape.map((r,i)=>{ const p=G.picks[i].p; return {
                 ord:i+1, role:r, name:p.n, nat:p.c, abbr:(NAT_ABBR[p.c]||p.c),
                 era:p.e.join("/"), stripe:(STRIPE[p.c]||"#26402f"),
                 bowl:(r==="PACE"?"pace":r==="SPIN"?"spin":null),
                 keep:r==="KEEP", ar:r==="AR" }; }) };
+  G._gamesPending=null;
+  renderResultExtras();
   show("result");
 }
 
@@ -945,15 +1139,22 @@ function simulate(){
 /* World Cup — main tournament: 10 teams, single round-robin (9 games),
    top 4 reach the semi-finals, then the final. Win all 11 → 11–0. */
 function simWC(team){
+  resetBox();
+  const games=[], names=nameOpponents(11);
   const league=[];
-  for(let i=0;i<9;i++){ const opp=66+clamp(randNorm()*9+9,0,18); league.push(Math.random()<winProb(team,opp)?"W":"L"); }
+  for(let i=0;i<9;i++){ const opp=66+clamp(randNorm()*9+9,0,18);
+    const r=Math.random()<winProb(team,opp)?"W":"L"; league.push(r);
+    const sc=odiScore(r,opp); accrue(sc);
+    games.push({stage:`League ${i+1}`, oppName:names[i], oppRating:Math.round(opp), result:r, sc}); }
   const lw=league.filter(x=>x==="W").length;
   let above=0; for(let i=0;i<9;i++){ let rw=0; for(let g=0;g<9;g++) if(Math.random()<0.5) rw++; if(rw>lw) above++; } // 9 rivals
   const rank=above+1, top4=rank<=4;
   let log=league.slice(), sf=null, fin=null, champ=false;
   if(top4){
     sf=Math.random()<winProb(team,82)?"W":"L"; log.push(sf);
-    if(sf==="W"){ fin=Math.random()<winProb(team,84)?"W":"L"; log.push(fin); champ=(fin==="W"); }
+    { const sc=odiScore(sf,82); accrue(sc); games.push({stage:"Semi-final", oppName:names[9], oppRating:82, result:sf, sc}); }
+    if(sf==="W"){ fin=Math.random()<winProb(team,84)?"W":"L"; log.push(fin); champ=(fin==="W");
+      const fc=odiScore(fin,84); accrue(fc); games.push({stage:"Final", oppName:names[10], oppRating:84, result:fin, sc:fc}); }
   }
   const W=log.filter(x=>x==="W").length, L=log.filter(x=>x==="L").length;
   const grid = league.map(x=>x==="W"?"🟩":"🟥").join("")
@@ -973,6 +1174,7 @@ function simWC(team){
     sub=`Finished ${ord(rank)} of 10 and reached the semis, but couldn't go all the way. Won ${lw} of 9 in the group.`; }
   else { verdict="GROUP STAGE EXIT"; vclass="v-out";
     sub=`Won ${lw} of 9 — ${ord(rank)} of 10. Only the top four reach the semi-finals. The dream ends in the group.`; }
+  G._gamesPending=games;
   setResult(verdict,vclass,`${W}–${L}`,sub,grid,team,tiles);
 }
 
@@ -985,15 +1187,19 @@ function simWTC(team){
   let total=series.reduce((s,x)=>s+x.len,0);
   while(total>21){ let k=0; series.forEach((x,i)=>{ if(x.len>series[k].len) k=i; }); series[k].len--; total--; }
 
+  resetBox();
+  const games=[], names=nameOpponents(24); let gi=0;
   let log=[], W=0,D=0,L=0, pts=0;
-  for(const s of series) for(let m=0;m<s.len;m++){
+  series.forEach((s,si)=>{ for(let m=0;m<s.len;m++){
     const opp = (68+clamp(randNorm()*8+8,0,16)) + (s.home? -HOME : HOME);  // league opp 68-84, ±home
     const wp=winProb(team,opp), lp=winProb(opp,team);
     const db=clamp(0.36-Math.abs(team-opp)/70, 0.08, 0.36);               // closer sides draw more
     const w=wp*(1-db), l=lp*(1-db), x=Math.random();
     let r; if(x<w){r="W";W++;pts+=12;} else if(x<1-l){r="D";D++;pts+=4;} else {r="L";L++;}
     log.push(r);
-  }
+    const sc=testScore(r,Math.round(opp)); accrue(sc);
+    games.push({stage:`Series ${si+1} · Test ${m+1}${s.home?" (H)":" (A)"}`, oppName:names[gi++]||"Invitational XI", oppRating:Math.round(opp), result:r, sc});
+  } });
   const played=log.length, pct=pts/(12*played)*100;
   let above=0; for(let i=0;i<8;i++){ if(clamp(50+randNorm()*14,28,78) > pct) above++; }   // vs 8 rivals
   const rank=above+1, madeFinal=rank<=2;
@@ -1004,6 +1210,7 @@ function simWTC(team){
     const db=clamp(0.30-Math.abs(team-opp)/70,0.06,0.30);
     const w=wp*(1-db), l=lp*(1-db), x=Math.random();
     if(x<w){finalRes="W";champ=true;} else if(x<1-l){finalRes="D";champ=(rank===1);} else finalRes="L";
+    const fc=testScore(finalRes,83); accrue(fc); games.push({stage:"WTC Final", oppName:names[gi++]||"Mace Final", oppRating:83, result:finalRes, sc:fc});
   }
   const totalL=L+(finalRes==="L"?1:0), recW=W+(finalRes==="W"?1:0), recD=D+(finalRes==="D"?1:0);
   const grid=log.map(x=>x==="W"?"🟩":x==="D"?"⬜":"🟥").join("")
@@ -1022,6 +1229,7 @@ function simWTC(team){
     sub=`${standing} Reached the final and ${finalRes==="L"?"lost it":"couldn't force the win"}. One match from the mace. ${struct}.`; }
   else { verdict="MISSED THE FINAL"; vclass="v-out";
     sub=`${standing} Only the top 2 of 9 reach the final — you came up short. ${struct}.`; }
+  G._gamesPending=games;
   setResult(verdict,vclass,`${recW}–${recD}–${totalL}`,sub,grid,team,tiles);
 }
 
@@ -1054,7 +1262,7 @@ function drawShareCard(c){
   const rungH=46, rungN=c.xi.length + 1;             // +1 for the ATTACK seam row
   const yMode=168, yVerdict=246, yRecord=394, yRating=446;
   const tilesTop=502, balTop=tilesTop+tilesH+30, xiLabelY=balTop+90, rowsTop=xiLabelY+32;
-  const H=rowsTop+rungN*rungH+96;
+  const H=rowsTop+rungN*rungH+140;
   const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
   const x=cv.getContext("2d");
   const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"#16271d"); g.addColorStop(1,"#0c1410");
@@ -1090,6 +1298,9 @@ function drawShareCard(c){
     x.textAlign="right"; x.fillStyle="#8fae9d"; x.font="500 20px -apple-system,sans-serif"; x.fillText(m.abbr, W-120, yy);
     yy+=rungH;
   });
+  if(c.awards){ const a=c.awards, ln=s=>s.split(" ").pop();
+    x.textAlign="center"; x.fillStyle="#f4c542"; x.font="600 21px ui-monospace,Menlo,monospace";
+    x.fillText(`🏆 ${ln(a.potm.n)} ${a.potm.runs}  ·  ⚡ ${ln(a.wkts.n)} ${a.wkts.wkts}w`, W/2, H-100); }
   x.textAlign="center"; x.fillStyle="#19c37d"; x.font="600 24px -apple-system,sans-serif"; x.fillText("can your all-time XI go unbeaten?", W/2, H-56);
   return cv;
 }
